@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Greenshot MacCatalyst (CoreCLR Attach, Current Build)",
+      "type": "coreclr",
+      "request": "attach",
+      "processName": "Greenshot.Maui",
+      "preLaunchTask": "coreclr: Start Current Signed MacCatalyst",
+      "postDebugTask": "coreclr: Stop Signed MacCatalyst",
+      "justMyCode": true,
+      "requireExactSource": true,
+      "logging": {
+        "programOutput": true,
+        "processExit": true
+      }
+    },
+    {
+      "name": "Greenshot MacCatalyst (CoreCLR Attach, Rebuild)",
+      "type": "coreclr",
+      "request": "attach",
+      "processName": "Greenshot.Maui",
+      "preLaunchTask": "coreclr: Rebuild and Start Signed MacCatalyst",
+      "postDebugTask": "coreclr: Stop Signed MacCatalyst",
+      "justMyCode": true,
+      "requireExactSource": true,
+      "logging": {
+        "programOutput": true,
+        "processExit": true
+      }
+    }
+  ]
+}

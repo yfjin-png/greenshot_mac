@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Greenshot.Maui.Core/Greenshot.Maui.Core.csproj" />
+  <Project Path="Greenshot.Maui.Core.Tests/Greenshot.Maui.Core.Tests.csproj" />
+  <Project Path="Greenshot.Maui/Greenshot.Maui.csproj" />
+</Solution>

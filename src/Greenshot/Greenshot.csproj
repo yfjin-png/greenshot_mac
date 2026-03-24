@@ -62,12 +62,12 @@
     <EmojiDataTask EmojiTestTxtFile="..\Greenshot.Editor\Controls\Emoji\emoji-test.txt" OutputFilename="$(SolutionDir)$(SolutionName)\$(OutDir)\emojis.xml" />
   </Target>
 
-  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug' And $([MSBuild]::IsOSPlatform('Windows'))">
     <PostBuildEvent>
       copy "$(SolutionDir)Greenshot\log4net-debug.xml" "$(SolutionDir)Greenshot\bin\$(Configuration)\net480\log4net.xml"
     </PostBuildEvent>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' And $([MSBuild]::IsOSPlatform('Windows'))">
     <PostBuildEvent>
       copy "$(SolutionDir)Greenshot\log4net-release.xml" "$(SolutionDir)Greenshot\bin\$(Configuration)\net480\log4net.xml"
     </PostBuildEvent>

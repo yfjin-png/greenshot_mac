@@ -65,6 +65,13 @@ Build Instructions:
 * Verify all components are built successfully.
 * You are ready to start contributing to Greenshot.
 
+MacCatalyst MAUI migration track:
+--------------------------------
+
+* The MacCatalyst migration work uses `/src/Greenshot.Maui.slnx` as the canonical solution entrypoint.
+* For local Mac build, test, and run commands, see `docs/maccatalyst-development.md` or use `scripts/maui-maccatalyst-dev.sh`.
+* For signing and Screen Recording permission prerequisites, see `docs/maccatalyst-signing.md`.
+
 How to contribute:
 ------------------
 

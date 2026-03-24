@@ -1,0 +1,92 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "coreclr: Build Signed MacCatalyst",
+      "type": "shell",
+      "command": "/bin/zsh",
+      "args": [
+        "-lc",
+        "IDENTITY=$(security find-identity -v -p codesigning | awk -F '\"' '/Apple Development:/ { print $2; exit }'); if [ -z \"$IDENTITY\" ]; then echo 'No Apple Development identity found. Open Xcode > Settings > Accounts > Manage Certificates.' >&2; exit 1; fi; export GRENSHOT_MAC_CODESIGN_KEY=\"$IDENTITY\"; scripts/maui-maccatalyst-dev.sh build"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "coreclr: Start Current Signed MacCatalyst",
+      "type": "shell",
+      "command": "/bin/zsh",
+      "args": [
+        "-lc",
+        "APP_PATH=\"$PWD/src/Greenshot.Maui/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Greenshot.app\"; APP_EXECUTABLE=\"$APP_PATH/Contents/MacOS/Greenshot.Maui\"; if [ ! -x \"$APP_EXECUTABLE\" ]; then echo 'Build the signed app first with coreclr: Build Signed MacCatalyst.' >&2; exit 1; fi; pkill -f \"$APP_EXECUTABLE\" || true; open -n \"$APP_PATH\"; for _ in {1..20}; do pgrep -f \"$APP_EXECUTABLE\" >/dev/null && exit 0; sleep 0.5; done; echo 'Greenshot app did not launch in time.' >&2; exit 1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "coreclr: Rebuild and Start Signed MacCatalyst",
+      "type": "shell",
+      "command": "/bin/zsh",
+      "args": [
+        "-lc",
+        "IDENTITY=$(security find-identity -v -p codesigning | awk -F '\"' '/Apple Development:/ { print $2; exit }'); if [ -z \"$IDENTITY\" ]; then echo 'No Apple Development identity found. Open Xcode > Settings > Accounts > Manage Certificates.' >&2; exit 1; fi; export GRENSHOT_MAC_CODESIGN_KEY=\"$IDENTITY\"; APP_PATH=\"$PWD/src/Greenshot.Maui/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Greenshot.app\"; APP_EXECUTABLE=\"$APP_PATH/Contents/MacOS/Greenshot.Maui\"; scripts/maui-maccatalyst-dev.sh build; pkill -f \"$APP_EXECUTABLE\" || true; open -n \"$APP_PATH\"; for _ in {1..20}; do pgrep -f \"$APP_EXECUTABLE\" >/dev/null && exit 0; sleep 0.5; done; echo 'Greenshot app did not launch in time.' >&2; exit 1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "coreclr: Stop Signed MacCatalyst",
+      "type": "shell",
+      "command": "/bin/zsh",
+      "args": [
+        "-lc",
+        "APP_EXECUTABLE=\"$PWD/src/Greenshot.Maui/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Greenshot.app/Contents/MacOS/Greenshot.Maui\"; pkill -f \"$APP_EXECUTABLE\" || true"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "maui: Reset Screen Recording",
+      "type": "shell",
+      "command": "scripts/maui-maccatalyst-dev.sh reset-screen-recording",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    }
+  ]
+}

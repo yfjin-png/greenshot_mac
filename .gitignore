@@ -216,6 +216,9 @@ ModelManifest.xml
 # Rider files
 .idea
 
+# Local editor integrations with secrets or machine-specific config
+/.vscode/mcp.json
+
 # Files compressed during the build
 *.gz
 /installer/Greenshot-INSTALLER-*.exe

@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:cap="clr-namespace:Greenshot.Maui.Core.Capabilities;assembly=Greenshot.Maui.Core"
+             BackgroundColor="{AppThemeBinding Light=#F4FAF5, Dark=#111713}"
+             x:Class="Greenshot.Maui.MainPage">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24,20,24,28" Spacing="18">
+            <Border Padding="24" StrokeThickness="0" StrokeShape="RoundRectangle 28">
+                <Border.Background>
+                    <LinearGradientBrush EndPoint="1,1">
+                        <GradientStop Color="#0F6B47" Offset="0.0" />
+                        <GradientStop Color="#27A36D" Offset="1.0" />
+                    </LinearGradientBrush>
+                </Border.Background>
+                <VerticalStackLayout Spacing="14">
+                    <Border Padding="10,5" HorizontalOptions="Start" StrokeThickness="0" BackgroundColor="#184F38" StrokeShape="RoundRectangle 999">
+                        <Label Text="MAUI migration track" TextColor="#EAF8F1" FontSize="12" FontFamily="OpenSansSemibold" />
+                    </Border>
+                    <Label Text="Greenshot cross-platform shell" TextColor="#F7FFF9" FontSize="30" FontFamily="OpenSansSemibold" LineHeight="1.1" />
+                    <Label Text="The new desktop host is now moving to .NET MAUI. This workspace proves the first Mac-friendly entry point while native capture and hotkey services are extracted from the legacy Windows shell."
+                           TextColor="#DDF5E8"
+                           FontSize="14"
+                           LineHeight="1.35" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <Border Padding="14" StrokeThickness="0" BackgroundColor="#1A7A52" StrokeShape="RoundRectangle 18">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Platform" TextColor="#CFEFDD" FontSize="12" />
+                                <Label x:Name="PlatformValueLabel" TextColor="#FFFFFF" FontSize="18" FontFamily="OpenSansSemibold" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <Border Grid.Column="1" Padding="14" StrokeThickness="0" BackgroundColor="#1A7A52" StrokeShape="RoundRectangle 18">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Workspace" TextColor="#CFEFDD" FontSize="12" />
+                                <Label x:Name="StatusValueLabel" TextColor="#FFFFFF" FontSize="18" FontFamily="OpenSansSemibold" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Padding="18" StrokeShape="RoundRectangle 24" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#171E1A}">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Workspace" FontSize="22" FontFamily="OpenSansSemibold" TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
+                    <Label x:Name="SelectedImageLabel" FontSize="16" FontFamily="OpenSansSemibold" TextColor="{AppThemeBinding Light=#234735, Dark=#D8F4E3}" />
+                    <Label x:Name="WorkspaceHintLabel" FontSize="13" LineHeight="1.35" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                    <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Center" JustifyContent="Start">
+                        <Button x:Name="CaptureButton" Margin="0,0,10,10" Text="Capture Screen" Clicked="OnCaptureScreenClicked" />
+                        <Button x:Name="CaptureWindowButton" Margin="0,0,10,10" Text="Capture Window" Clicked="OnCaptureWindowClicked" />
+                        <Button x:Name="CaptureRegionButton" Margin="0,0,10,10" Text="Capture Region" Clicked="OnCaptureRegionClicked" />
+                        <Button x:Name="OpenImageButton" Margin="0,0,10,10" Text="Open Image" Clicked="OnOpenImageClicked" />
+                        <Button x:Name="EditImageButton" Margin="0,0,10,10" Text="Edit Image" Clicked="OnEditImageClicked" />
+                        <Button x:Name="CopyPathButton" Margin="0,0,10,10" Text="Copy Path" Clicked="OnCopyPathClicked" />
+                        <Button x:Name="ClearButton" Margin="0,0,10,10" Text="Clear" Clicked="OnClearImageClicked" />
+                    </FlexLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Padding="18" StrokeShape="RoundRectangle 24" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#171E1A}">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Preview" FontSize="22" FontFamily="OpenSansSemibold" TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
+                    <Border x:Name="SelectionInstructionPanel"
+                            Padding="12"
+                            IsVisible="False"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 16"
+                            BackgroundColor="{AppThemeBinding Light=#EAF8F1, Dark=#133525}">
+                        <Label x:Name="SelectionInstructionLabel"
+                               FontSize="13"
+                               LineHeight="1.35"
+                               TextColor="{AppThemeBinding Light=#22523A, Dark=#DDF5E8}" />
+                    </Border>
+                    <Border Padding="14" StrokeShape="RoundRectangle 20" BackgroundColor="{AppThemeBinding Light=#F8FCF8, Dark=#0E1410}">
+                        <Grid x:Name="PreviewStage" MinimumHeightRequest="300">
+                            <Image x:Name="PreviewImage" Aspect="AspectFit" IsVisible="False" />
+                            <AbsoluteLayout x:Name="EditorAnnotationLayer"
+                                            IsVisible="False"
+                                            InputTransparent="True" />
+                            <AbsoluteLayout x:Name="EditorInputOverlay" IsVisible="False">
+                                <AbsoluteLayout.GestureRecognizers>
+                                    <PointerGestureRecognizer PointerEntered="OnEditorPointerEntered"
+                                                              PointerExited="OnEditorPointerExited"
+                                                              PointerPressed="OnEditorPointerPressed"
+                                                              PointerMoved="OnEditorPointerMoved"
+                                                              PointerReleased="OnEditorPointerReleased" />
+                                </AbsoluteLayout.GestureRecognizers>
+                                <ContentView x:Name="EditorCursorIndicator"
+                                             IsVisible="False"
+                                             InputTransparent="True"
+                                             AbsoluteLayout.LayoutBounds="0,0,24,24">
+                                    <Grid WidthRequest="24" HeightRequest="24">
+                                        <BoxView WidthRequest="2"
+                                                 HeightRequest="24"
+                                                 HorizontalOptions="Center"
+                                                 VerticalOptions="Center"
+                                                 Color="#E6F6FFF9" />
+                                        <BoxView WidthRequest="24"
+                                                 HeightRequest="2"
+                                                 HorizontalOptions="Center"
+                                                 VerticalOptions="Center"
+                                                 Color="#E6F6FFF9" />
+                                        <Border WidthRequest="8"
+                                                HeightRequest="8"
+                                                HorizontalOptions="Center"
+                                                VerticalOptions="Center"
+                                                InputTransparent="True"
+                                                Stroke="#D56A2F"
+                                                StrokeThickness="2"
+                                                BackgroundColor="#B20E1410"
+                                                StrokeShape="RoundRectangle 999" />
+                                    </Grid>
+                                </ContentView>
+                            </AbsoluteLayout>
+                            <AbsoluteLayout x:Name="SelectionOverlay" IsVisible="False">
+                                <BoxView x:Name="SelectionInputSurface"
+                                         Color="#01000000"
+                                         AbsoluteLayout.LayoutBounds="0,0,1,1"
+                                         AbsoluteLayout.LayoutFlags="All">
+                                    <BoxView.GestureRecognizers>
+                                        <PointerGestureRecognizer PointerEntered="OnSelectionPointerEntered"
+                                                                  PointerExited="OnSelectionPointerExited"
+                                                                  PointerPressed="OnSelectionPointerPressed"
+                                                                  PointerMoved="OnSelectionPointerMoved"
+                                                                  PointerReleased="OnSelectionPointerReleased" />
+                                    </BoxView.GestureRecognizers>
+                                </BoxView>
+                                <Border x:Name="SelectionBox"
+                                        IsVisible="False"
+                                        InputTransparent="True"
+                                        Stroke="#15875C"
+                                        StrokeThickness="2"
+                                        BackgroundColor="#3315875C"
+                                        StrokeShape="RoundRectangle 6"
+                                        AbsoluteLayout.LayoutBounds="0,0,0,0" />
+                                <ContentView x:Name="SelectionCursorIndicator"
+                                             IsVisible="False"
+                                             InputTransparent="True"
+                                             AbsoluteLayout.LayoutBounds="0,0,24,24">
+                                    <Grid WidthRequest="24" HeightRequest="24">
+                                        <BoxView WidthRequest="2"
+                                                 HeightRequest="24"
+                                                 HorizontalOptions="Center"
+                                                 VerticalOptions="Center"
+                                                 Color="#E6F6FFF9" />
+                                        <BoxView WidthRequest="24"
+                                                 HeightRequest="2"
+                                                 HorizontalOptions="Center"
+                                                 VerticalOptions="Center"
+                                                 Color="#E6F6FFF9" />
+                                        <Border WidthRequest="8"
+                                                HeightRequest="8"
+                                                HorizontalOptions="Center"
+                                                VerticalOptions="Center"
+                                                InputTransparent="True"
+                                                Stroke="#15875C"
+                                                StrokeThickness="2"
+                                                BackgroundColor="#B20E1410"
+                                                StrokeShape="RoundRectangle 999" />
+                                    </Grid>
+                                </ContentView>
+                            </AbsoluteLayout>
+                            <VerticalStackLayout x:Name="EmptyStatePanel" Spacing="8" HorizontalOptions="Center" VerticalOptions="Center">
+                                <Label Text="No screenshot loaded yet"
+                                       FontSize="18"
+                                       FontFamily="OpenSansSemibold"
+                                       HorizontalTextAlignment="Center"
+                                       TextColor="{AppThemeBinding Light=#204432, Dark=#E1F6E8}" />
+                                <Label Text="Open an existing PNG or JPEG to validate the new MAUI shell and file workflow."
+                                       FontSize="13"
+                                       HorizontalTextAlignment="Center"
+                                       TextColor="{AppThemeBinding Light=#587767, Dark=#9EB8A8}" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+                    <HorizontalStackLayout x:Name="SelectionActionsPanel" Spacing="10" IsVisible="False">
+                        <Button x:Name="ApplySelectionButton" Text="Capture Selection" IsEnabled="False" Clicked="OnApplySelectionClicked" />
+                        <Button Text="Cancel Selection" Clicked="OnCancelSelectionClicked" />
+                    </HorizontalStackLayout>
+                    <FlexLayout x:Name="EditorToolPanel"
+                                Wrap="Wrap"
+                                Direction="Row"
+                                AlignItems="Center"
+                                JustifyContent="Start"
+                                IsVisible="False">
+                        <Button x:Name="EditorRectangleButton" Margin="0,0,10,10" Text="Rectangle" Clicked="OnRectangleToolClicked" />
+                        <Button x:Name="EditorArrowButton" Margin="0,0,10,10" Text="Arrow" Clicked="OnArrowToolClicked" />
+                        <Button x:Name="EditorLineButton" Margin="0,0,10,10" Text="Line" Clicked="OnLineToolClicked" />
+                        <Button x:Name="EditorHighlightButton" Margin="0,0,10,10" Text="Highlight" Clicked="OnHighlightToolClicked" />
+                        <Button x:Name="EditorTextButton" Margin="0,0,10,10" Text="Text" Clicked="OnTextToolClicked" />
+                        <Button x:Name="EditorCalloutButton" Margin="0,0,10,10" Text="Callout" Clicked="OnCalloutToolClicked" />
+                        <Button x:Name="EditorUndoButton" Margin="0,0,10,10" Text="Undo" Clicked="OnUndoAnnotationClicked" />
+                        <Button x:Name="EditorSaveButton" Margin="0,0,10,10" Text="Save Copy" Clicked="OnSaveEditedCopyClicked" />
+                        <Button x:Name="EditorCloseButton" Margin="0,0,10,10" Text="Close Editor" Clicked="OnCloseEditorClicked" />
+                    </FlexLayout>
+                    <Border x:Name="EditorStylePanel"
+                            Padding="14"
+                            IsVisible="False"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 20"
+                            BackgroundColor="{AppThemeBinding Light=#F5FBF7, Dark=#111A14}">
+                        <VerticalStackLayout Spacing="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="Annotation properties"
+                                       FontSize="16"
+                                       FontFamily="OpenSansSemibold"
+                                       TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
+                                <Label Text="Changes apply to the selected object, or to the current tool preset when nothing is selected."
+                                       FontSize="12"
+                                       LineHeight="1.3"
+                                       TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                            </VerticalStackLayout>
+                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+                                <VerticalStackLayout x:Name="EditorStrokeColorPanel" Grid.Row="0" Grid.Column="0" Spacing="6">
+                                    <Label Text="Stroke color" FontSize="12" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                    <Picker x:Name="EditorStrokeColorPicker" Title="Stroke color" SelectedIndexChanged="OnEditorStrokeColorChanged" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout x:Name="EditorFillColorPanel" Grid.Row="0" Grid.Column="1" Spacing="6">
+                                    <Label x:Name="EditorFillColorLabel" Text="Fill / background" FontSize="12" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                    <Picker x:Name="EditorFillColorPicker" Title="Fill or background color" SelectedIndexChanged="OnEditorFillColorChanged" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout x:Name="EditorStrokeStylePanel" Grid.Row="1" Grid.Column="0" Spacing="6">
+                                    <Label Text="Stroke style" FontSize="12" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                    <Picker x:Name="EditorStrokeStylePicker" Title="Stroke style" SelectedIndexChanged="OnEditorStrokeStyleChanged" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout x:Name="EditorTextColorPanel" Grid.Row="1" Grid.Column="1" Spacing="6">
+                                    <Label Text="Text color" FontSize="12" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                    <Picker x:Name="EditorTextColorPicker" Title="Text color" SelectedIndexChanged="OnEditorTextColorChanged" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout x:Name="EditorStrokeThicknessPanel" Grid.Row="2" Grid.ColumnSpan="2" Spacing="6">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <Label Text="Stroke thickness" FontSize="12" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                        <Label x:Name="EditorStrokeThicknessValueLabel"
+                                               FontSize="12"
+                                               FontFamily="OpenSansSemibold"
+                                               TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
+                                    </Grid>
+                                    <Slider x:Name="EditorStrokeThicknessSlider"
+                                            Minimum="1"
+                                            Maximum="16"
+                                            ThumbColor="#15875C"
+                                            MinimumTrackColor="#15875C"
+                                            MaximumTrackColor="#CFEFDD"
+                                            ValueChanged="OnEditorStrokeThicknessChanged" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout x:Name="EditorTextSizePanel" Grid.Row="3" Grid.ColumnSpan="2" Spacing="6">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <Label Text="Text size" FontSize="12" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                        <Label x:Name="EditorTextSizeValueLabel"
+                                               FontSize="12"
+                                               FontFamily="OpenSansSemibold"
+                                               TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
+                                    </Grid>
+                                    <Slider x:Name="EditorTextSizeSlider"
+                                            Minimum="10"
+                                            Maximum="48"
+                                            ThumbColor="#15875C"
+                                            MinimumTrackColor="#15875C"
+                                            MaximumTrackColor="#CFEFDD"
+                                            ValueChanged="OnEditorTextSizeChanged" />
+                                </VerticalStackLayout>
+                            </Grid>
+                            <VerticalStackLayout x:Name="EditorTextContentPanel" Spacing="6">
+                                <Label x:Name="EditorTextContentLabel"
+                                       Text="Text"
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                <Editor x:Name="EditorTextInput"
+                                        HeightRequest="96"
+                                        AutoSize="TextChanges"
+                                        Placeholder="Enter annotation text"
+                                        TextChanged="OnEditorTextChanged" />
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Padding="18" StrokeShape="RoundRectangle 24" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#171E1A}">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Port status" FontSize="22" FontFamily="OpenSansSemibold" TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
+                    <Label Text="These are the feature seams that must be reimplemented for a real MAUI screenshot tool."
+                           FontSize="13"
+                           TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+
+                    <VerticalStackLayout x:Name="CapabilitiesPanel" Spacing="10">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="cap:CapabilityStatus">
+                                <Border Padding="14" StrokeThickness="0" StrokeShape="RoundRectangle 18" BackgroundColor="{Binding CardBackgroundHex}">
+                                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="8" ColumnSpacing="12">
+                                        <Label Text="{Binding Title}" FontSize="16" FontFamily="OpenSansSemibold" TextColor="#173525" />
+                                        <Border Grid.Column="1" Padding="10,4" StrokeThickness="0" StrokeShape="RoundRectangle 999" BackgroundColor="{Binding AccentHex}">
+                                            <Label Text="{Binding StateLabel}" FontSize="12" TextColor="White" FontFamily="OpenSansSemibold" />
+                                        </Border>
+                                        <Label Grid.Row="1"
+                                               Grid.ColumnSpan="2"
+                                               Text="{Binding Detail}"
+                                               FontSize="13"
+                                               LineHeight="1.35"
+                                               TextColor="#4D665A" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <Label Text="Next step: keep expanding the editor with blur, obfuscation, resize, and the remaining tray, hotkey, and clipboard integrations."
+                   FontSize="12"
+                   HorizontalTextAlignment="Center"
+                   TextColor="{AppThemeBinding Light=#6A8576, Dark=#8FA695}" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
