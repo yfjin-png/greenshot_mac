@@ -16,7 +16,7 @@ For the canonical local build and test entrypoints, use `docs/maccatalyst-develo
 
 1. In Xcode, add your Apple ID under `Settings > Accounts`.
 2. Create an `Apple Development` certificate if one is missing.
-3. Export the signing identity into your shell session:
+3. Export the signing identity into your shell session if you want to pin a specific certificate:
 
 ```bash
 export GRENSHOT_MAC_CODESIGN_KEY="Apple Development: Your Name (TEAMID)"
@@ -38,6 +38,7 @@ dotnet build src/Greenshot.Maui/Greenshot.Maui.csproj \
 ```
 
 The project now picks up `GRENSHOT_MAC_CODESIGN_KEY` and `GRENSHOT_MAC_CODESIGN_PROVISION` automatically for MacCatalyst builds.
+The local helper script also auto-detects the first `Apple Development` identity in your keychain when `GRENSHOT_MAC_CODESIGN_KEY` is unset.
 
 ## Useful diagnostics
 
@@ -47,10 +48,11 @@ Check signing identities available on this Mac:
 security find-identity -v -p codesigning
 ```
 
-As of 2026-03-23 on this development Mac, the command still reports:
+As of 2026-03-24 on this development Mac, the command reports:
 
 ```text
-0 valid identities found
+1) DDBC333F3DCEDEF09FEB74D0845C0F3036E15514 "Apple Development: kanri462afterfit@icloud.com (F285Z2WHPA)"
+   1 valid identities found
 ```
 
 Inspect the built app signature:
@@ -59,18 +61,35 @@ Inspect the built app signature:
 codesign -dv --verbose=4 src/Greenshot.Maui/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Greenshot.app
 ```
 
-If no `Apple Development` identity is configured, the current build remains ad hoc-signed. On 2026-03-23 the output included:
+With the detected `Apple Development` identity configured, the current build is no longer ad hoc-signed. On 2026-03-24 the output included:
 
 ```text
 Identifier=org.greenshot.maui
-Signature=adhoc
-TeamIdentifier=not set
+Authority=Apple Development: kanri462afterfit@icloud.com (F285Z2WHPA)
+TeamIdentifier=99T25R3367
 ```
 
-That is sufficient for local binaries, but not for closing the TCC validation work in Phase 2.
+That is the stable-signing state you want for local TCC validation.
 
 Reset Screen Recording approval for the current bundle id:
 
 ```bash
 tccutil reset ScreenCapture org.greenshot.maui
 ```
+
+## Remembered local launch method
+
+For this repo, the permission-safe launch flow to remember is:
+
+```bash
+scripts/maui-maccatalyst-dev.sh build
+scripts/maui-maccatalyst-dev.sh open
+```
+
+If Screen Recording gets stuck again, use:
+
+```bash
+scripts/maui-maccatalyst-dev.sh recover-screen-recording
+```
+
+That keeps reopening the same signed `.app` instead of rebuilding it with `dotnet run`.

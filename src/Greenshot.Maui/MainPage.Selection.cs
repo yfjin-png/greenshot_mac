@@ -21,10 +21,16 @@ public partial class MainPage
 		ClearSelectionPointerIndicator();
 	}
 
-	private void OnSelectionPointerPressed(object? sender, PointerEventArgs e)
+	private async void OnSelectionPointerPressed(object? sender, PointerEventArgs e)
 	{
 		if (!_workspaceSession.IsSelectingRegion)
 		{
+			return;
+		}
+
+		if (e.Button == ButtonsMask.Secondary)
+		{
+			await ShowWorkspaceMenuAsync();
 			return;
 		}
 

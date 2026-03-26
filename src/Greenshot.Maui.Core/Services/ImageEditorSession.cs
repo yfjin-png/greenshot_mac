@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace Greenshot.Maui.Core.Services;
 
 public sealed class ImageEditorSession
@@ -11,6 +13,7 @@ public sealed class ImageEditorSession
 	private const double AnnotationHitTolerance = 12d;
 	private const double MinimumAnnotationPixels = 6d;
 	private readonly List<ImageEditorAnnotation> _annotations = [];
+	private readonly List<ImageEditorPoint> _draftPathPoints = [];
 	private readonly Dictionary<ImageEditorTool, ImageEditorToolPreset> _toolPresets = Enum
 		.GetValues<ImageEditorTool>()
 		.ToDictionary(tool => tool, ImageEditorToolDefaults.Get);
@@ -27,6 +30,8 @@ public sealed class ImageEditorSession
 	public bool IsDrawingDraft => DraftStartPoint.HasValue && DraftCurrentPoint.HasValue;
 
 	public bool IsManipulatingSelection => _interactionState is not null;
+
+	public ImageEditorSelectionHandle? ActiveInteractionHandle => _interactionState?.Handle;
 
 	public ImageEditorPoint? DraftStartPoint { get; private set; }
 
@@ -48,14 +53,15 @@ public sealed class ImageEditorSession
 		SelectedAnnotation?.Text ?? _toolPresets[ActiveTool].Text;
 
 	public ImageEditorAnnotation? DraftAnnotation =>
-		IsDrawingDraft
+		IsDrawingDraft && ActiveTool != ImageEditorTool.Image
 			? new ImageEditorAnnotation(
 				Guid.Empty,
 				ActiveTool,
 				DraftStartPoint!.Value,
 				DraftCurrentPoint!.Value,
 				_toolPresets[ActiveTool].Style,
-				_toolPresets[ActiveTool].Text)
+				_toolPresets[ActiveTool].Text,
+				PathPoints: ActiveTool == ImageEditorTool.Pencil ? _draftPathPoints.ToArray() : null)
 			: null;
 
 	public void BeginEditing(string filePath, ImageEditorDocumentInfo documentInfo)
@@ -96,7 +102,7 @@ public sealed class ImageEditorSession
 
 	public void StartDraft(ImageEditorPoint point)
 	{
-		if (!IsEditing)
+		if (!IsEditing || ActiveTool == ImageEditorTool.Image)
 		{
 			return;
 		}
@@ -104,6 +110,11 @@ public sealed class ImageEditorSession
 		var clampedPoint = ClampPoint(point);
 		DraftStartPoint = clampedPoint;
 		DraftCurrentPoint = clampedPoint;
+		_draftPathPoints.Clear();
+		if (ActiveTool == ImageEditorTool.Pencil)
+		{
+			_draftPathPoints.Add(clampedPoint);
+		}
 	}
 
 	public void UpdateDraft(ImageEditorPoint point)
@@ -113,12 +124,18 @@ public sealed class ImageEditorSession
 			return;
 		}
 
-		DraftCurrentPoint = ClampPoint(point);
+		var clampedPoint = ClampPoint(point);
+		DraftCurrentPoint = clampedPoint;
+		if (ActiveTool == ImageEditorTool.Pencil &&
+			(_draftPathPoints.Count == 0 || !PointsEqual(_draftPathPoints[^1], clampedPoint)))
+		{
+			_draftPathPoints.Add(clampedPoint);
+		}
 	}
 
 	public ImageEditorAnnotation? CompleteDraft(ImageEditorPoint? point = null)
 	{
-		if (!IsEditing || !DraftStartPoint.HasValue || !DraftCurrentPoint.HasValue)
+		if (!IsEditing || ActiveTool == ImageEditorTool.Image || !DraftStartPoint.HasValue || !DraftCurrentPoint.HasValue)
 		{
 			return null;
 		}
@@ -126,16 +143,30 @@ public sealed class ImageEditorSession
 		if (point.HasValue)
 		{
 			DraftCurrentPoint = ClampPoint(point.Value);
+			if (ActiveTool == ImageEditorTool.Pencil &&
+				(_draftPathPoints.Count == 0 || !PointsEqual(_draftPathPoints[^1], DraftCurrentPoint.Value)))
+			{
+				_draftPathPoints.Add(DraftCurrentPoint.Value);
+			}
 		}
 
 		var preset = _toolPresets[ActiveTool];
+		var startPoint = DraftStartPoint.Value;
+		var endPoint = DraftCurrentPoint.Value;
+		var pathPoints = ActiveTool == ImageEditorTool.Pencil
+			? _draftPathPoints.Count > 0
+				? _draftPathPoints.ToArray()
+				: [startPoint, endPoint]
+			: null;
+
 		var annotation = new ImageEditorAnnotation(
 			Guid.NewGuid(),
 			ActiveTool,
-			DraftStartPoint.Value,
-			DraftCurrentPoint.Value,
+			startPoint,
+			endPoint,
 			preset.Style,
-			preset.Text);
+			preset.Text,
+			PathPoints: pathPoints);
 
 		CancelDraft();
 		if (!annotation.IsMeaningful())
@@ -169,6 +200,67 @@ public sealed class ImageEditorSession
 	{
 		SelectedAnnotationId = null;
 		_interactionState = null;
+		if (ActiveTool == ImageEditorTool.Image)
+		{
+			ActiveTool = ImageEditorTool.Rectangle;
+		}
+	}
+
+	public ImageEditorAnnotation? AddTextAnnotation(string text)
+	{
+		if (!IsEditing || string.IsNullOrWhiteSpace(text))
+		{
+			return null;
+		}
+
+		var preset = _toolPresets[ImageEditorTool.Text];
+		var normalizedText = text.Trim();
+		var lineCount = Math.Max(1, normalizedText.Split('\n').Length);
+		var width = Math.Min(DocumentInfo.PixelWidth * 0.55d, 560d);
+		var height = Math.Max(72d, Math.Min(DocumentInfo.PixelHeight * 0.35d, (preset.Style.TextSize * (lineCount + 1)) + 28d));
+		var bounds = CreateCenteredBounds(width, height);
+		var annotation = new ImageEditorAnnotation(
+			Guid.NewGuid(),
+			ImageEditorTool.Text,
+			new ImageEditorPoint(bounds.X, bounds.Y),
+			new ImageEditorPoint(bounds.Right, bounds.Bottom),
+			preset.Style,
+			normalizedText);
+
+		AddAnnotation(annotation, makeActiveTool: ImageEditorTool.Text);
+		return annotation;
+	}
+
+	public ImageEditorAnnotation? AddImageAnnotation(string imagePath, ImageEditorDocumentInfo imageInfo)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(imagePath);
+
+		if (!IsEditing || !imageInfo.IsValid || !File.Exists(imagePath))
+		{
+			return null;
+		}
+
+		var widthLimit = Math.Max(DocumentInfo.PixelWidth * 0.6d, 48d);
+		var heightLimit = Math.Max(DocumentInfo.PixelHeight * 0.6d, 48d);
+		var scale = Math.Min(
+			1d,
+			Math.Min(
+				widthLimit / imageInfo.PixelWidth,
+				heightLimit / imageInfo.PixelHeight));
+		var width = Math.Max(imageInfo.PixelWidth * scale, 32d);
+		var height = Math.Max(imageInfo.PixelHeight * scale, 32d);
+		var bounds = CreateCenteredBounds(width, height);
+		var annotation = new ImageEditorAnnotation(
+			Guid.NewGuid(),
+			ImageEditorTool.Image,
+			new ImageEditorPoint(bounds.X, bounds.Y),
+			new ImageEditorPoint(bounds.Right, bounds.Bottom),
+			_toolPresets[ImageEditorTool.Image].Style,
+			string.Empty,
+			imagePath);
+
+		AddAnnotation(annotation, makeActiveTool: ImageEditorTool.Image);
+		return annotation;
 	}
 
 	public void SetStrokeColor(ImageEditorColor color)
@@ -279,6 +371,7 @@ public sealed class ImageEditorSession
 	{
 		DraftStartPoint = null;
 		DraftCurrentPoint = null;
+		_draftPathPoints.Clear();
 	}
 
 	private ImageEditorHitTarget? FindHitTarget(ImageEditorPoint point)
@@ -317,6 +410,15 @@ public sealed class ImageEditorSession
 			SelectedAnnotationId = annotation.Id;
 			return;
 		}
+	}
+
+	private void AddAnnotation(ImageEditorAnnotation annotation, ImageEditorTool makeActiveTool)
+	{
+		_annotations.Add(annotation);
+		SelectedAnnotationId = annotation.Id;
+		ActiveTool = makeActiveTool;
+		CancelDraft();
+		_interactionState = null;
 	}
 
 	private ImageEditorAnnotation ApplyInteraction(InteractionState state, ImageEditorPoint currentPoint)
@@ -399,6 +501,15 @@ public sealed class ImageEditorSession
 			Math.Clamp(point.Y, 0d, maxY));
 	}
 
+	private ImageEditorRect CreateCenteredBounds(double width, double height)
+	{
+		var clampedWidth = Math.Min(Math.Max(width, MinimumAnnotationPixels), DocumentInfo.PixelWidth);
+		var clampedHeight = Math.Min(Math.Max(height, MinimumAnnotationPixels), DocumentInfo.PixelHeight);
+		var x = Math.Max((DocumentInfo.PixelWidth - clampedWidth) / 2d, 0d);
+		var y = Math.Max((DocumentInfo.PixelHeight - clampedHeight) / 2d, 0d);
+		return new ImageEditorRect(x, y, clampedWidth, clampedHeight);
+	}
+
 	private void ResetToolPresets()
 	{
 		foreach (var tool in Enum.GetValues<ImageEditorTool>())
@@ -422,4 +533,8 @@ public sealed class ImageEditorSession
 
 		ReplaceAnnotation(update(SelectedAnnotation));
 	}
+
+	private static bool PointsEqual(ImageEditorPoint left, ImageEditorPoint right) =>
+		Math.Abs(left.X - right.X) <= double.Epsilon &&
+		Math.Abs(left.Y - right.Y) <= double.Epsilon;
 }

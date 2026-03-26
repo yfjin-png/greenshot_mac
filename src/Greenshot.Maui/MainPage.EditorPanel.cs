@@ -57,21 +57,27 @@ public partial class MainPage
 
 	private void UpdateEditorPropertyPanel()
 	{
-		EditorStylePanel.IsVisible = _imageEditorSession.IsEditing;
 		if (!_imageEditorSession.IsEditing)
 		{
+			EditorStylePanel.IsVisible = false;
 			return;
 		}
 
 		var tool = _imageEditorSession.SelectedAnnotation?.Tool ?? _imageEditorSession.ActiveTool;
 		var style = _imageEditorSession.CurrentStyle;
+		var supportsStroke = ToolSupportsStroke(tool);
 		var supportsFill = ToolSupportsFill(tool);
 		var supportsText = ToolSupportsText(tool);
+		var isInlineTextEditing = _inlineTextEditingAnnotationId.HasValue;
 
+		EditorStylePanel.IsVisible = supportsStroke || supportsFill || supportsText;
+		EditorStrokeColorPanel.IsVisible = supportsStroke;
+		EditorStrokeStylePanel.IsVisible = supportsStroke;
+		EditorStrokeThicknessPanel.IsVisible = supportsStroke;
 		EditorFillColorPanel.IsVisible = supportsFill;
 		EditorTextColorPanel.IsVisible = supportsText;
 		EditorTextSizePanel.IsVisible = supportsText;
-		EditorTextContentPanel.IsVisible = supportsText;
+		EditorTextContentPanel.IsVisible = supportsText && !isInlineTextEditing;
 		EditorFillColorLabel.Text = tool is ImageEditorTool.Text or ImageEditorTool.SpeechBubble
 			? "Background color"
 			: "Fill / background";
@@ -111,6 +117,9 @@ public partial class MainPage
 			_isUpdatingEditorControls = false;
 		}
 	}
+
+	private static bool ToolSupportsStroke(ImageEditorTool tool) =>
+		tool is not ImageEditorTool.Image;
 
 	private static bool ToolSupportsFill(ImageEditorTool tool) =>
 		tool is ImageEditorTool.Rectangle or ImageEditorTool.Highlight or ImageEditorTool.Text or ImageEditorTool.SpeechBubble;

@@ -82,6 +82,12 @@ public static class ImageEditorArtifactService
 	{
 		switch (annotation.Tool)
 		{
+			case ImageEditorTool.Image:
+				DrawImageAnnotation(image, annotation);
+				break;
+			case ImageEditorTool.Pencil:
+				DrawPencil(image, annotation);
+				break;
 			case ImageEditorTool.Rectangle:
 				DrawRectangle(image, annotation.Bounds, annotation.Style);
 				break;
@@ -103,6 +109,30 @@ public static class ImageEditorArtifactService
 			default:
 				throw new ArgumentOutOfRangeException(nameof(annotation.Tool), annotation.Tool, "Unsupported annotation tool.");
 		}
+	}
+
+	private static void DrawImageAnnotation(Image<Rgba32> image, ImageEditorAnnotation annotation)
+	{
+		if (string.IsNullOrWhiteSpace(annotation.AssetPath) || !File.Exists(annotation.AssetPath))
+		{
+			return;
+		}
+
+		var rect = NormalizeRect(annotation.Bounds, image.Width, image.Height);
+		if (rect.Width <= 0 || rect.Height <= 0)
+		{
+			return;
+		}
+
+		using var overlay = Image.Load<Rgba32>(annotation.AssetPath);
+		overlay.Mutate(context => context.Resize(
+			Math.Max(1, (int)Math.Round(rect.Width)),
+			Math.Max(1, (int)Math.Round(rect.Height))));
+
+		image.Mutate(context => context.DrawImage(
+			overlay,
+			new Point((int)Math.Round(rect.X), (int)Math.Round(rect.Y)),
+			1f));
 	}
 
 	private static void DrawRectangle(Image<Rgba32> image, ImageEditorRect bounds, ImageEditorAnnotationStyle style)
@@ -160,6 +190,22 @@ public static class ImageEditorArtifactService
 			baseY - (perpendicularY * headWidth / 2d));
 
 		FillTriangle(image, point1, point2, point3, strokeColor);
+	}
+
+	private static void DrawPencil(Image<Rgba32> image, ImageEditorAnnotation annotation)
+	{
+		var points = annotation.PathPoints is { Count: > 1 }
+			? annotation.PathPoints
+			: [annotation.StartPoint, annotation.EndPoint];
+		var strokeColor = ToRgba32(annotation.Style.StrokeColor);
+		var thickness = Math.Max(annotation.Style.StrokeThickness, 2f);
+
+		for (var index = 1; index < points.Count; index++)
+		{
+			var start = ClampPoint(points[index - 1], image.Width, image.Height);
+			var end = ClampPoint(points[index], image.Width, image.Height);
+			DrawStyledLine(image, start, end, strokeColor, thickness, annotation.Style.StrokeStyle);
+		}
 	}
 
 	private static void DrawTextAnnotation(Image<Rgba32> image, ImageEditorAnnotation annotation)
@@ -505,12 +551,13 @@ public static class ImageEditorArtifactService
 		}
 
 		var fontSize = Math.Max(style.TextSize, 10f);
-		var font = SystemFonts.CreateFont("Arial", fontSize, FontStyle.Regular);
-		var textOptions = new RichTextOptions(font)
+		var resolvedFont = TextFontResolver.Resolve(fontSize);
+		var textOptions = new RichTextOptions(resolvedFont.Font)
 		{
 			Origin = new PointF((float)(rect.X + (rect.Width / 2d)), (float)(rect.Y + (rect.Height / 2d))),
 			HorizontalAlignment = HorizontalAlignment.Center,
 			VerticalAlignment = VerticalAlignment.Center,
+			FallbackFontFamilies = resolvedFont.FallbackFontFamilies,
 			WrappingLength = (float)Math.Max(rect.Width - 12d, 1d)
 		};
 

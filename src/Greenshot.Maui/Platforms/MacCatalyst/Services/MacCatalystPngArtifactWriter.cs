@@ -25,7 +25,7 @@ internal sealed class MacCatalystPngArtifactWriter
 
 		var outputPath = Path.Combine(
 			FileSystem.Current.CacheDirectory,
-			$"{filePrefix}-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.png");
+			$"{filePrefix}-{DateTimeOffset.Now:yyyyMMdd-HHmmssfff}.png");
 
 		await File.WriteAllBytesAsync(outputPath, data.ToArray(), cancellationToken).ConfigureAwait(false);
 		return ScreenshotCaptureResult.Success(outputPath, successMessage, (int)image.Width, (int)image.Height);

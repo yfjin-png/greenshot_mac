@@ -1,3 +1,4 @@
+using System.IO;
 using Greenshot.Maui.Core.Services;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Graphics;
@@ -8,7 +9,12 @@ namespace Greenshot.Maui;
 
 public partial class MainPage
 {
+	private const double EditorClickToEditDistance = 8d;
 	private readonly ImageEditorSession _imageEditorSession = new();
+	private Guid? _inlineTextEditingAnnotationId;
+	private bool _isUpdatingInlineTextEditor;
+	private Guid? _pendingInlineTextEditAnnotationId;
+	private Point? _pendingInlineTextEditPoint;
 
 	private async Task EnterImageEditorModeAsync(string filePath)
 	{
@@ -23,11 +29,14 @@ public partial class MainPage
 	{
 		SetSelectionPointerCursor(false);
 		ClearEditorPointerIndicator();
+		HideInlineTextEditor();
 		_imageEditorSession.ExitEditing();
 		RefreshWorkspaceState(statusText);
 	}
 
 	private void OnRectangleToolClicked(object? sender, EventArgs e) => SetEditorTool(ImageEditorTool.Rectangle);
+
+	private void OnPencilToolClicked(object? sender, EventArgs e) => SetEditorTool(ImageEditorTool.Pencil);
 
 	private void OnArrowToolClicked(object? sender, EventArgs e) => SetEditorTool(ImageEditorTool.Arrow);
 
@@ -49,6 +58,9 @@ public partial class MainPage
 	}
 
 	private async void OnSaveEditedCopyClicked(object? sender, EventArgs e)
+		=> await SaveEditedCopyAsync();
+
+	private async Task SaveEditedCopyAsync()
 	{
 		if (!_imageEditorSession.IsEditing || string.IsNullOrWhiteSpace(_imageEditorSession.SourceImagePath))
 		{
@@ -66,10 +78,25 @@ public partial class MainPage
 			var outputPath = await _imageEditorService.SaveAnnotatedCopyAsync(
 				_imageEditorSession.SourceImagePath,
 				_imageEditorSession.Annotations);
+			string? clipboardFailure = null;
+
+			try
+			{
+				await CopyImageToClipboardAsync(outputPath);
+			}
+			catch (Exception ex)
+			{
+				clipboardFailure = ex.Message;
+			}
 
 			_imageEditorSession.ExitEditing();
 			_workspaceSession.LoadImage(outputPath);
-			RefreshWorkspaceState("Edited copy saved");
+			RefreshWorkspaceState(clipboardFailure is null ? "Edited copy saved" : "Edited copy saved; clipboard copy failed");
+
+			if (clipboardFailure is not null)
+			{
+				await DisplayAlertAsync("Clipboard copy failed", clipboardFailure, "OK");
+			}
 		}
 		catch (Exception ex)
 		{
@@ -78,6 +105,9 @@ public partial class MainPage
 	}
 
 	private void OnCloseEditorClicked(object? sender, EventArgs e)
+		=> CloseEditor();
+
+	private void CloseEditor()
 	{
 		if (!_imageEditorSession.IsEditing)
 		{
@@ -104,10 +134,16 @@ public partial class MainPage
 		ClearEditorPointerIndicator();
 	}
 
-	private void OnEditorPointerPressed(object? sender, PointerEventArgs e)
+	private async void OnEditorPointerPressed(object? sender, PointerEventArgs e)
 	{
 		if (!_imageEditorSession.IsEditing)
 		{
+			return;
+		}
+
+		if (e.Button == ButtonsMask.Secondary)
+		{
+			await ShowWorkspaceMenuAsync();
 			return;
 		}
 
@@ -120,13 +156,38 @@ public partial class MainPage
 		}
 
 		UpdateEditorPointerIndicator(point);
+		if (_inlineTextEditingAnnotationId.HasValue)
+		{
+			HideInlineTextEditor();
+		}
+
+		var selectedAnnotationBeforeInteraction = _imageEditorSession.SelectedAnnotation;
 		if (_imageEditorSession.TryBeginInteraction(imagePoint))
 		{
+			var selectedAnnotation = _imageEditorSession.SelectedAnnotation;
+			var interactionHandle = _imageEditorSession.ActiveInteractionHandle;
+			var shouldEditText = selectedAnnotation is { } annotation &&
+				selectedAnnotationBeforeInteraction is { } previouslySelectedAnnotation &&
+				previouslySelectedAnnotation.Id == annotation.Id &&
+				IsTextEditableAnnotation(annotation.Tool) &&
+				interactionHandle == ImageEditorSelectionHandle.Body;
+
 			UpdateEditorVisual();
 			UpdateActionState(hasImage: !string.IsNullOrWhiteSpace(_workspaceSession.SelectedImagePath));
+
+			if (selectedAnnotation is { } clickedAnnotation && shouldEditText)
+			{
+				TrackPendingInlineTextEdit(clickedAnnotation.Id, point.Value);
+			}
+			else
+			{
+				ClearPendingInlineTextEdit();
+			}
+
 			return;
 		}
 
+		ClearPendingInlineTextEdit();
 		_imageEditorSession.StartDraft(imagePoint);
 		UpdateEditorVisual();
 	}
@@ -145,6 +206,12 @@ public partial class MainPage
 
 		if (_imageEditorSession.IsManipulatingSelection)
 		{
+			if (_pendingInlineTextEditAnnotationId.HasValue &&
+				(point is null || !IsWithinInlineTextEditDistance(point.Value)))
+			{
+				ClearPendingInlineTextEdit();
+			}
+
 			if (point is null || !TryMapEditorPoint(point.Value, out var interactionPoint))
 			{
 				return;
@@ -160,6 +227,7 @@ public partial class MainPage
 			return;
 		}
 
+		ClearPendingInlineTextEdit();
 		_imageEditorSession.UpdateDraft(imagePoint);
 		UpdateEditorVisual();
 	}
@@ -178,6 +246,14 @@ public partial class MainPage
 
 		if (_imageEditorSession.IsManipulatingSelection)
 		{
+			var shouldBeginInlineTextEditing =
+				_pendingInlineTextEditAnnotationId.HasValue &&
+				point is not null &&
+				IsWithinInlineTextEditDistance(point.Value) &&
+				_imageEditorSession.SelectedAnnotation is { } selectedAnnotation &&
+				selectedAnnotation.Id == _pendingInlineTextEditAnnotationId.Value &&
+				IsTextEditableAnnotation(selectedAnnotation.Tool);
+
 			if (point is not null && TryMapEditorPoint(point.Value, out var interactionPoint))
 			{
 				_imageEditorSession.CompleteInteraction(interactionPoint);
@@ -185,6 +261,13 @@ public partial class MainPage
 			else
 			{
 				_imageEditorSession.CompleteInteraction();
+			}
+
+			ClearPendingInlineTextEdit();
+			if (shouldBeginInlineTextEditing)
+			{
+				BeginInlineTextEditing();
+				return;
 			}
 
 			UpdateEditorVisual();
@@ -206,6 +289,7 @@ public partial class MainPage
 			_imageEditorSession.CompleteDraft();
 		}
 
+		ClearPendingInlineTextEdit();
 		UpdateEditorVisual();
 		UpdateActionState(hasImage: !string.IsNullOrWhiteSpace(_workspaceSession.SelectedImagePath));
 	}
@@ -217,8 +301,81 @@ public partial class MainPage
 			return;
 		}
 
+		ClearPendingInlineTextEdit();
+		HideInlineTextEditor();
 		_imageEditorSession.SetTool(tool);
 		UpdateEditorVisual();
+	}
+
+	private static bool IsTextEditableAnnotation(ImageEditorTool tool) =>
+		tool is ImageEditorTool.Text or ImageEditorTool.SpeechBubble;
+
+	private void TrackPendingInlineTextEdit(Guid annotationId, Point point)
+	{
+		_pendingInlineTextEditAnnotationId = annotationId;
+		_pendingInlineTextEditPoint = point;
+	}
+
+	private bool IsWithinInlineTextEditDistance(Point point)
+	{
+		if (!_pendingInlineTextEditPoint.HasValue)
+		{
+			return false;
+		}
+
+		var deltaX = point.X - _pendingInlineTextEditPoint.Value.X;
+		var deltaY = point.Y - _pendingInlineTextEditPoint.Value.Y;
+		return (deltaX * deltaX) + (deltaY * deltaY) <= EditorClickToEditDistance * EditorClickToEditDistance;
+	}
+
+	private void ClearPendingInlineTextEdit()
+	{
+		_pendingInlineTextEditAnnotationId = null;
+		_pendingInlineTextEditPoint = null;
+	}
+
+	private void BeginInlineTextEditing()
+	{
+		if (_imageEditorSession.SelectedAnnotation is not { } annotation || !IsTextEditableAnnotation(annotation.Tool))
+		{
+			return;
+		}
+
+		_inlineTextEditingAnnotationId = annotation.Id;
+		UpdateEditorVisual();
+		UpdateActionState(hasImage: !string.IsNullOrWhiteSpace(_workspaceSession.SelectedImagePath));
+		ClearPendingInlineTextEdit();
+
+		Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(1), () =>
+		{
+			InlineTextEditor.Focus();
+			var text = InlineTextEditor.Text ?? string.Empty;
+			InlineTextEditor.CursorPosition = 0;
+			InlineTextEditor.SelectionLength = text.Length;
+		});
+	}
+
+	private void OnInlineTextEditorTextChanged(object? sender, TextChangedEventArgs e)
+	{
+		if (_isUpdatingInlineTextEditor ||
+			!_inlineTextEditingAnnotationId.HasValue ||
+			!_imageEditorSession.IsEditing ||
+			_imageEditorSession.SelectedAnnotation is not { } annotation ||
+			annotation.Id != _inlineTextEditingAnnotationId.Value)
+		{
+			return;
+		}
+
+		_imageEditorSession.SetText(e.NewTextValue ?? string.Empty);
+		UpdateEditorPropertyPanel();
+	}
+
+	private void OnInlineTextEditorUnfocused(object? sender, FocusEventArgs e)
+	{
+		if (_inlineTextEditingAnnotationId.HasValue)
+		{
+			HideInlineTextEditor();
+		}
 	}
 
 	private void UpdateEditorVisual()
@@ -230,16 +387,21 @@ public partial class MainPage
 		{
 			EditorAnnotationLayer.IsVisible = false;
 			EditorAnnotationLayer.Children.Clear();
+			EditorInputOverlay.InputTransparent = false;
+			HideInlineTextEditor(updateVisual: false);
 			return;
 		}
 
 		var displayRect = GetEditorDisplayRect();
+		EditorInputOverlay.InputTransparent = _inlineTextEditingAnnotationId.HasValue;
 		EditorAnnotationLayer.IsVisible = displayRect.Width > 0d && displayRect.Height > 0d;
 		RenderEditorAnnotations(displayRect);
+		UpdateInlineTextEditor(displayRect);
 	}
 
 	private void UpdateEditorToolSelection()
 	{
+		SetEditorToolButtonState(EditorPencilButton, _imageEditorSession.ActiveTool == ImageEditorTool.Pencil);
 		SetEditorToolButtonState(EditorRectangleButton, _imageEditorSession.ActiveTool == ImageEditorTool.Rectangle);
 		SetEditorToolButtonState(EditorArrowButton, _imageEditorSession.ActiveTool == ImageEditorTool.Arrow);
 		SetEditorToolButtonState(EditorLineButton, _imageEditorSession.ActiveTool == ImageEditorTool.Line);
@@ -354,8 +516,21 @@ public partial class MainPage
 		float opacity,
 		SelectionCanvasRect displayRect)
 	{
+		var suppressText = ShouldSuppressAnnotationText(annotation);
 		switch (annotation.Tool)
 		{
+			case ImageEditorTool.Image:
+				if (CreateImageAnnotationView(annotation, opacity, displayRect) is { } imageView)
+				{
+					EditorAnnotationLayer.Children.Add(imageView);
+				}
+				break;
+			case ImageEditorTool.Pencil:
+				foreach (var view in CreatePencilViews(annotation, opacity, displayRect))
+				{
+					EditorAnnotationLayer.Children.Add(view);
+				}
+				break;
 			case ImageEditorTool.Rectangle:
 			case ImageEditorTool.Highlight:
 				EditorAnnotationLayer.Children.Add(
@@ -363,10 +538,10 @@ public partial class MainPage
 				break;
 			case ImageEditorTool.Text:
 				EditorAnnotationLayer.Children.Add(
-					CreateAnnotationBorderView(annotation.Bounds, annotation.Style, opacity, displayRect, annotation.Text));
+					CreateAnnotationBorderView(annotation.Bounds, annotation.Style, opacity, displayRect, suppressText ? null : annotation.Text));
 				break;
 			case ImageEditorTool.SpeechBubble:
-				foreach (var view in CreateCalloutViews(annotation, opacity, displayRect))
+				foreach (var view in CreateCalloutViews(annotation, opacity, displayRect, suppressText ? null : annotation.Text))
 				{
 					EditorAnnotationLayer.Children.Add(view);
 				}
@@ -386,6 +561,39 @@ public partial class MainPage
 			default:
 				throw new ArgumentOutOfRangeException(nameof(annotation.Tool), annotation.Tool, "Unsupported image editor tool.");
 		}
+	}
+
+	private View? CreateImageAnnotationView(
+		ImageEditorAnnotation annotation,
+		float opacity,
+		SelectionCanvasRect displayRect)
+	{
+		if (string.IsNullOrWhiteSpace(annotation.AssetPath) || !File.Exists(annotation.AssetPath))
+		{
+			return null;
+		}
+
+		var displayBounds = ToDisplayRect(annotation.Bounds, displayRect);
+		var view = new Border
+		{
+			InputTransparent = true,
+			StrokeThickness = 0d,
+			Background = Brush.Transparent,
+			StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(10) },
+			Content = new Image
+			{
+				InputTransparent = true,
+				Source = ImageSource.FromFile(annotation.AssetPath),
+				Aspect = Aspect.Fill,
+				Opacity = opacity
+			}
+		};
+
+		AbsoluteLayout.SetLayoutBounds(
+			view,
+			new Rect(displayBounds.X, displayBounds.Y, displayBounds.Width, displayBounds.Height));
+
+		return view;
 	}
 
 	private Border CreateAnnotationBorderView(
@@ -435,10 +643,11 @@ public partial class MainPage
 	private IReadOnlyList<View> CreateCalloutViews(
 		ImageEditorAnnotation annotation,
 		float opacity,
-		SelectionCanvasRect displayRect)
+		SelectionCanvasRect displayRect,
+		string? text)
 	{
 		var displayBounds = ToDisplayRect(annotation.Bounds, displayRect);
-		var border = CreateAnnotationBorderView(annotation.Bounds, annotation.Style, opacity, displayRect, annotation.Text);
+		var border = CreateAnnotationBorderView(annotation.Bounds, annotation.Style, opacity, displayRect, text);
 		var fillColor = ToColor(annotation.Style.FillColor, opacity);
 		var strokeColor = ToColor(annotation.Style.StrokeColor, opacity);
 		var tailBaseCenterX = displayBounds.X + Math.Max(displayBounds.Width * 0.28d, 18d);
@@ -467,6 +676,30 @@ public partial class MainPage
 
 		views.Add(CreateStyledLine(tailLeft, tailTip, strokeColor, annotation.Style, displayRect));
 		views.Add(CreateStyledLine(tailTip, tailRight, strokeColor, annotation.Style, displayRect));
+		return views;
+	}
+
+	private IReadOnlyList<View> CreatePencilViews(
+		ImageEditorAnnotation annotation,
+		float opacity,
+		SelectionCanvasRect displayRect)
+	{
+		var points = annotation.PathPoints is { Count: > 1 }
+			? annotation.PathPoints
+			: [annotation.StartPoint, annotation.EndPoint];
+		var strokeColor = ToColor(annotation.Style.StrokeColor, opacity);
+		var views = new List<View>();
+
+		for (var index = 1; index < points.Count; index++)
+		{
+			views.Add(CreateStyledLine(
+				ToDisplayPoint(points[index - 1], displayRect),
+				ToDisplayPoint(points[index], displayRect),
+				strokeColor,
+				annotation.Style,
+				displayRect));
+		}
+
 		return views;
 	}
 
@@ -605,15 +838,88 @@ public partial class MainPage
 			color.B / 255f,
 			(color.A / 255f) * opacity);
 
+	private bool ShouldSuppressAnnotationText(ImageEditorAnnotation annotation) =>
+		_inlineTextEditingAnnotationId.HasValue &&
+		annotation.Id == _inlineTextEditingAnnotationId.Value &&
+		IsTextEditableAnnotation(annotation.Tool);
+
+	private void UpdateInlineTextEditor(SelectionCanvasRect displayRect)
+	{
+		if (_imageEditorSession.SelectedAnnotation is not { } annotation ||
+			!_inlineTextEditingAnnotationId.HasValue ||
+			annotation.Id != _inlineTextEditingAnnotationId.Value ||
+			!IsTextEditableAnnotation(annotation.Tool) ||
+			displayRect.Width <= 0d ||
+			displayRect.Height <= 0d)
+		{
+			HideInlineTextEditor(updateVisual: false);
+			return;
+		}
+
+		var displayBounds = ToDisplayRect(annotation.Bounds, displayRect);
+		_isUpdatingInlineTextEditor = true;
+		try
+		{
+			InlineTextEditorOverlay.IsVisible = true;
+			InlineTextEditorHost.Padding = annotation.Tool == ImageEditorTool.SpeechBubble
+				? new Thickness(14d, 8d)
+				: new Thickness(12d, 8d);
+			AbsoluteLayout.SetLayoutBounds(
+				InlineTextEditorHost,
+				new Rect(
+					displayBounds.X,
+					displayBounds.Y,
+					Math.Max(displayBounds.Width, 72d),
+					Math.Max(displayBounds.Height, 48d)));
+			InlineTextEditor.FontSize = GetTextFontSize(annotation.Style, displayRect);
+			InlineTextEditor.TextColor = ToColor(annotation.Style.TextColor, 1f);
+			InlineTextEditor.HorizontalTextAlignment = TextAlignment.Center;
+			if (!string.Equals(InlineTextEditor.Text, annotation.Text, StringComparison.Ordinal))
+			{
+				InlineTextEditor.Text = annotation.Text;
+			}
+
+			InlineTextEditorHost.IsVisible = true;
+		}
+		finally
+		{
+			_isUpdatingInlineTextEditor = false;
+		}
+	}
+
+	private void HideInlineTextEditor(bool updateVisual = true)
+	{
+		if (!_inlineTextEditingAnnotationId.HasValue && !InlineTextEditorHost.IsVisible)
+		{
+			return;
+		}
+
+		ClearPendingInlineTextEdit();
+		_inlineTextEditingAnnotationId = null;
+		InlineTextEditorOverlay.IsVisible = false;
+		InlineTextEditorHost.IsVisible = false;
+		EditorInputOverlay.InputTransparent = false;
+		AbsoluteLayout.SetLayoutBounds(InlineTextEditorHost, new Rect(0d, 0d, 0d, 0d));
+
+		if (updateVisual && _imageEditorSession.IsEditing)
+		{
+			UpdateEditorVisual();
+		}
+	}
+
 	private void AddEditorSelectionChrome(ImageEditorAnnotation annotation, SelectionCanvasRect displayRect)
 	{
 		switch (annotation.Tool)
 		{
+			case ImageEditorTool.Image:
 			case ImageEditorTool.Rectangle:
 			case ImageEditorTool.Highlight:
 			case ImageEditorTool.Text:
 			case ImageEditorTool.SpeechBubble:
 				AddBoxSelectionChrome(annotation.Bounds, displayRect);
+				break;
+			case ImageEditorTool.Pencil:
+				AddPencilSelectionChrome(annotation, displayRect);
 				break;
 			case ImageEditorTool.Arrow:
 			case ImageEditorTool.Line:
@@ -668,6 +974,28 @@ public partial class MainPage
 
 		EditorAnnotationLayer.Children.Add(CreateSelectionHandle(start));
 		EditorAnnotationLayer.Children.Add(CreateSelectionHandle(end));
+	}
+
+	private void AddPencilSelectionChrome(ImageEditorAnnotation annotation, SelectionCanvasRect displayRect)
+	{
+		var displayBounds = ToDisplayRect(annotation.Bounds, displayRect);
+		var selectionBorder = new Border
+		{
+			InputTransparent = true,
+			Stroke = new SolidColorBrush(Color.FromArgb("#0F6B47")),
+			StrokeThickness = 2d,
+			Background = Brush.Transparent,
+			StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(10) }
+		};
+
+		AbsoluteLayout.SetLayoutBounds(
+			selectionBorder,
+			new Rect(
+				displayBounds.X - 4d,
+				displayBounds.Y - 4d,
+				Math.Max(displayBounds.Width + 8d, 12d),
+				Math.Max(displayBounds.Height + 8d, 12d)));
+		EditorAnnotationLayer.Children.Add(selectionBorder);
 	}
 
 	private Border CreateSelectionHandle(Point center)

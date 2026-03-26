@@ -2,7 +2,18 @@ namespace Greenshot.Maui.Core.Services;
 
 public sealed class ScreenshotWorkspaceSession
 {
+	private readonly List<string> _imageHistory = [];
+	private int _selectedImageHistoryIndex = -1;
+
 	public string? SelectedImagePath { get; private set; }
+
+	public IReadOnlyList<string> ImageHistory => _imageHistory;
+
+	public int SelectedImageHistoryNumber => _selectedImageHistoryIndex >= 0 ? _selectedImageHistoryIndex + 1 : 0;
+
+	public bool CanSelectPreviousImage => _selectedImageHistoryIndex > 0;
+
+	public bool CanSelectNextImage => _selectedImageHistoryIndex >= 0 && _selectedImageHistoryIndex < _imageHistory.Count - 1;
 
 	public string? SelectionSourcePath { get; private set; }
 
@@ -23,21 +34,23 @@ public sealed class ScreenshotWorkspaceSession
 		ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
 		ResetSelectionState();
-		SelectedImagePath = filePath;
+		SelectOrAppendImage(filePath);
 	}
 
 	public void ClearImage()
 	{
 		ResetSelectionState();
 		SelectedImagePath = null;
+		_imageHistory.Clear();
+		_selectedImageHistoryIndex = -1;
 	}
 
 	public void BeginRegionSelection(ScreenshotCaptureResult captureResult)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(captureResult.FilePath);
 
-		SelectedImagePath = captureResult.FilePath;
-		SelectionSourcePath = captureResult.FilePath;
+		SelectOrAppendImage(captureResult.FilePath);
+		SelectionSourcePath = SelectedImagePath;
 		SelectionSourcePixelWidth = captureResult.PixelWidth;
 		SelectionSourcePixelHeight = captureResult.PixelHeight;
 		IsSelectingRegion = true;
@@ -59,10 +72,36 @@ public sealed class ScreenshotWorkspaceSession
 		ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
 		ResetSelectionState();
-		SelectedImagePath = filePath;
+		SelectOrAppendImage(filePath);
 	}
 
 	public void ExitRegionSelection() => ResetSelectionState();
+
+	public bool SelectPreviousImage()
+	{
+		if (!CanSelectPreviousImage)
+		{
+			return false;
+		}
+
+		ResetSelectionState();
+		_selectedImageHistoryIndex--;
+		SelectedImagePath = _imageHistory[_selectedImageHistoryIndex];
+		return true;
+	}
+
+	public bool SelectNextImage()
+	{
+		if (!CanSelectNextImage)
+		{
+			return false;
+		}
+
+		ResetSelectionState();
+		_selectedImageHistoryIndex++;
+		SelectedImagePath = _imageHistory[_selectedImageHistoryIndex];
+		return true;
+	}
 
 	public void StartSelection(SelectionCanvasPoint point)
 	{
@@ -135,5 +174,30 @@ public sealed class ScreenshotWorkspaceSession
 		SelectionSourcePath = null;
 		SelectionSourcePixelWidth = 0;
 		SelectionSourcePixelHeight = 0;
+	}
+
+	private void SelectOrAppendImage(string filePath)
+	{
+		if (_selectedImageHistoryIndex >= 0 &&
+			string.Equals(_imageHistory[_selectedImageHistoryIndex], filePath, StringComparison.Ordinal))
+		{
+			SelectedImagePath = filePath;
+			return;
+		}
+
+		if (_selectedImageHistoryIndex >= 0 && _selectedImageHistoryIndex < _imageHistory.Count - 1)
+		{
+			_imageHistory.RemoveRange(
+				_selectedImageHistoryIndex + 1,
+				_imageHistory.Count - _selectedImageHistoryIndex - 1);
+		}
+
+		if (_imageHistory.Count == 0 || !string.Equals(_imageHistory[^1], filePath, StringComparison.Ordinal))
+		{
+			_imageHistory.Add(filePath);
+		}
+
+		_selectedImageHistoryIndex = _imageHistory.Count - 1;
+		SelectedImagePath = filePath;
 	}
 }

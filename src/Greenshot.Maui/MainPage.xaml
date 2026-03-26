@@ -1,65 +1,192 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:cap="clr-namespace:Greenshot.Maui.Core.Capabilities;assembly=Greenshot.Maui.Core"
              BackgroundColor="{AppThemeBinding Light=#F4FAF5, Dark=#111713}"
+             NavigationPage.HasNavigationBar="False"
+             Shell.NavBarIsVisible="False"
              x:Class="Greenshot.Maui.MainPage">
 
+    <ContentPage.Resources>
+        <Style x:Key="CompactToolButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="MinimumHeightRequest" Value="34" />
+        </Style>
+        <Style x:Key="CompactNavButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="MinimumHeightRequest" Value="34" />
+            <Setter Property="MinimumWidthRequest" Value="34" />
+        </Style>
+        <Style x:Key="CompactFieldBorderStyle" TargetType="Border">
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="StrokeThickness" Value="0" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 14" />
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#F5FBF7, Dark=#111A14}" />
+        </Style>
+        <Style x:Key="CompactToolbarFieldStyle" TargetType="Border">
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="StrokeThickness" Value="0" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#F8FCF8, Dark=#0E1410}" />
+        </Style>
+        <Style x:Key="ChipBorderStyle" TargetType="Border">
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="StrokeThickness" Value="0" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 999" />
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#EAF8F1, Dark=#163223}" />
+        </Style>
+        <Style x:Key="MacMenuButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontFamily" Value="OpenSansSemibold" />
+            <Setter Property="BorderWidth" Value="0" />
+            <Setter Property="Shadow" Value="{x:Null}" />
+        </Style>
+    </ContentPage.Resources>
+
+    <ContentPage.MenuBarItems>
+        <MenuBarItem x:Name="FileMenuBarItem" Text="File">
+            <MenuFlyoutItem x:Name="OpenImageMenuItem"
+                            Text="Open Image..."
+                            Clicked="OnOpenImageClicked">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Cmd" Key="O" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+        </MenuBarItem>
+        <MenuBarItem x:Name="CaptureMenuBarItem" Text="Capture">
+            <MenuFlyoutItem x:Name="CaptureScreenMenuItem"
+                            Text="Capture Screen"
+                            Clicked="OnCaptureScreenClicked" />
+            <MenuFlyoutItem x:Name="CaptureWindowMenuItem"
+                            Text="Capture Window"
+                            Clicked="OnCaptureWindowClicked" />
+            <MenuFlyoutItem x:Name="CaptureRegionMenuItem"
+                            Text="Capture Region"
+                            Clicked="OnCaptureRegionClicked" />
+        </MenuBarItem>
+        <MenuBarItem x:Name="ImageMenuBarItem" Text="Image">
+            <MenuFlyoutItem x:Name="EditImageMenuItem"
+                            Text="Edit Image"
+                            Clicked="OnEditImageClicked" />
+            <MenuFlyoutItem x:Name="CopyToClipboardMenuItem"
+                            Text="Copy to Clipboard"
+                            Clicked="OnCopyToClipboardClicked" />
+            <MenuFlyoutItem x:Name="CopyPathMenuItem"
+                            Text="Copy Path"
+                            Clicked="OnCopyPathClicked" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem x:Name="ClearImageMenuItem"
+                            Text="Clear Image"
+                            Clicked="OnClearImageClicked" />
+        </MenuBarItem>
+        <MenuBarItem x:Name="SelectionMenuBarItem" Text="Selection">
+            <MenuFlyoutItem x:Name="ApplySelectionMenuItem"
+                            Text="Capture Selection"
+                            Clicked="OnApplySelectionClicked" />
+            <MenuFlyoutItem x:Name="CancelSelectionMenuItem"
+                            Text="Cancel Selection"
+                            Clicked="OnCancelSelectionClicked" />
+        </MenuBarItem>
+        <MenuBarItem x:Name="EditorMenuBarItem" Text="Editor">
+            <MenuFlyoutItem x:Name="SaveEditedCopyMenuItem"
+                            Text="Save Copy"
+                            Clicked="OnSaveEditedCopyClicked">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Cmd" Key="S" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem x:Name="CloseEditorMenuItem"
+                            Text="Close Editor"
+                            Clicked="OnCloseEditorClicked" />
+        </MenuBarItem>
+        <MenuBarItem x:Name="NavigateMenuBarItem" Text="Navigate">
+            <MenuFlyoutItem x:Name="PreviousImageMenuItem"
+                            Text="Previous Image"
+                            Clicked="OnPreviousImageClicked" />
+            <MenuFlyoutItem x:Name="NextImageMenuItem"
+                            Text="Next Image"
+                            Clicked="OnNextImageClicked" />
+        </MenuBarItem>
+        <MenuBarItem x:Name="WindowMenuBarItem" Text="Window">
+            <MenuFlyoutItem x:Name="ShowPreviewMenuItem"
+                            Text="Show Preview"
+                            Clicked="OnShowPreviewMenuItemClicked" />
+        </MenuBarItem>
+    </ContentPage.MenuBarItems>
+
     <ScrollView>
-        <VerticalStackLayout Padding="24,20,24,28" Spacing="18">
-            <Border Padding="24" StrokeThickness="0" StrokeShape="RoundRectangle 28">
-                <Border.Background>
-                    <LinearGradientBrush EndPoint="1,1">
-                        <GradientStop Color="#0F6B47" Offset="0.0" />
-                        <GradientStop Color="#27A36D" Offset="1.0" />
-                    </LinearGradientBrush>
-                </Border.Background>
+        <VerticalStackLayout Padding="24,18,24,28" Spacing="18">
+            <Border Padding="18" StrokeShape="RoundRectangle 24" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#171E1A}">
                 <VerticalStackLayout Spacing="14">
-                    <Border Padding="10,5" HorizontalOptions="Start" StrokeThickness="0" BackgroundColor="#184F38" StrokeShape="RoundRectangle 999">
-                        <Label Text="MAUI migration track" TextColor="#EAF8F1" FontSize="12" FontFamily="OpenSansSemibold" />
-                    </Border>
-                    <Label Text="Greenshot cross-platform shell" TextColor="#F7FFF9" FontSize="30" FontFamily="OpenSansSemibold" LineHeight="1.1" />
-                    <Label Text="The new desktop host is now moving to .NET MAUI. This workspace proves the first Mac-friendly entry point while native capture and hotkey services are extracted from the legacy Windows shell."
-                           TextColor="#DDF5E8"
-                           FontSize="14"
-                           LineHeight="1.35" />
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                        <Border Padding="14" StrokeThickness="0" BackgroundColor="#1A7A52" StrokeShape="RoundRectangle 18">
-                            <VerticalStackLayout Spacing="4">
-                                <Label Text="Platform" TextColor="#CFEFDD" FontSize="12" />
-                                <Label x:Name="PlatformValueLabel" TextColor="#FFFFFF" FontSize="18" FontFamily="OpenSansSemibold" />
-                            </VerticalStackLayout>
-                        </Border>
-                        <Border Grid.Column="1" Padding="14" StrokeThickness="0" BackgroundColor="#1A7A52" StrokeShape="RoundRectangle 18">
-                            <VerticalStackLayout Spacing="4">
-                                <Label Text="Workspace" TextColor="#CFEFDD" FontSize="12" />
-                                <Label x:Name="StatusValueLabel" TextColor="#FFFFFF" FontSize="18" FontFamily="OpenSansSemibold" />
-                            </VerticalStackLayout>
-                        </Border>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <VerticalStackLayout Spacing="8">
+                            <HorizontalStackLayout Spacing="8">
+                                <Border Style="{StaticResource ChipBorderStyle}">
+                                    <Label x:Name="PlatformValueLabel"
+                                           FontSize="12"
+                                           FontFamily="OpenSansSemibold"
+                                           TextColor="{AppThemeBinding Light=#22523A, Dark=#DDF5E8}" />
+                                </Border>
+                                <Border Style="{StaticResource ChipBorderStyle}">
+                                    <Label x:Name="StatusValueLabel"
+                                           FontSize="12"
+                                           FontFamily="OpenSansSemibold"
+                                           TextColor="{AppThemeBinding Light=#22523A, Dark=#DDF5E8}" />
+                                </Border>
+                            </HorizontalStackLayout>
+                            <Label x:Name="SelectedImageLabel"
+                                   FontSize="20"
+                                   FontFamily="OpenSansSemibold"
+                                   TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
+                            <Label x:Name="WorkspaceHintLabel"
+                                   FontSize="13"
+                                   LineHeight="1.35"
+                                   TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1"
+                                             Spacing="8"
+                                             HorizontalOptions="End">
+                            <Picker x:Name="WorkspaceMenuPicker"
+                                    Title="Capture / File"
+                                    IsVisible="{OnPlatform MacCatalyst=False, Default=True}"
+                                    WidthRequest="180"
+                                    HorizontalOptions="End"
+                                    SelectedIndexChanged="OnWorkspaceMenuSelectionChanged" />
+                            <Button x:Name="WorkspaceMenuButton"
+                                    IsVisible="{OnPlatform MacCatalyst=True, Default=False}"
+                                    HorizontalOptions="End"
+                                    Clicked="OnWorkspaceMenuButtonClicked"
+                                    Style="{StaticResource MacMenuButtonStyle}"
+                                    Text="Menu v" />
+                            <HorizontalStackLayout Spacing="8" HorizontalOptions="End">
+                                <Label x:Name="PreviewHistoryLabel"
+                                       VerticalTextAlignment="Center"
+                                       FontSize="12"
+                                       FontFamily="OpenSansSemibold"
+                                       TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                <Button x:Name="PreviousImageButton"
+                                        Text="Back"
+                                        Clicked="OnPreviousImageClicked"
+                                        IsEnabled="False"
+                                        Style="{StaticResource CompactNavButtonStyle}" />
+                                <Button x:Name="NextImageButton"
+                                        Text="Next"
+                                        Clicked="OnNextImageClicked"
+                                        IsEnabled="False"
+                                        Style="{StaticResource CompactNavButtonStyle}" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
                     </Grid>
-                </VerticalStackLayout>
-            </Border>
 
-            <Border Padding="18" StrokeShape="RoundRectangle 24" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#171E1A}">
-                <VerticalStackLayout Spacing="14">
-                    <Label Text="Workspace" FontSize="22" FontFamily="OpenSansSemibold" TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
-                    <Label x:Name="SelectedImageLabel" FontSize="16" FontFamily="OpenSansSemibold" TextColor="{AppThemeBinding Light=#234735, Dark=#D8F4E3}" />
-                    <Label x:Name="WorkspaceHintLabel" FontSize="13" LineHeight="1.35" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
-                    <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Center" JustifyContent="Start">
-                        <Button x:Name="CaptureButton" Margin="0,0,10,10" Text="Capture Screen" Clicked="OnCaptureScreenClicked" />
-                        <Button x:Name="CaptureWindowButton" Margin="0,0,10,10" Text="Capture Window" Clicked="OnCaptureWindowClicked" />
-                        <Button x:Name="CaptureRegionButton" Margin="0,0,10,10" Text="Capture Region" Clicked="OnCaptureRegionClicked" />
-                        <Button x:Name="OpenImageButton" Margin="0,0,10,10" Text="Open Image" Clicked="OnOpenImageClicked" />
-                        <Button x:Name="EditImageButton" Margin="0,0,10,10" Text="Edit Image" Clicked="OnEditImageClicked" />
-                        <Button x:Name="CopyPathButton" Margin="0,0,10,10" Text="Copy Path" Clicked="OnCopyPathClicked" />
-                        <Button x:Name="ClearButton" Margin="0,0,10,10" Text="Clear" Clicked="OnClearImageClicked" />
-                    </FlexLayout>
-                </VerticalStackLayout>
-            </Border>
-
-            <Border Padding="18" StrokeShape="RoundRectangle 24" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#171E1A}">
-                <VerticalStackLayout Spacing="14">
-                    <Label Text="Preview" FontSize="22" FontFamily="OpenSansSemibold" TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
                     <Border x:Name="SelectionInstructionPanel"
                             Padding="12"
                             IsVisible="False"
@@ -71,9 +198,14 @@
                                LineHeight="1.35"
                                TextColor="{AppThemeBinding Light=#22523A, Dark=#DDF5E8}" />
                     </Border>
+
                     <Border Padding="14" StrokeShape="RoundRectangle 20" BackgroundColor="{AppThemeBinding Light=#F8FCF8, Dark=#0E1410}">
                         <Grid x:Name="PreviewStage" MinimumHeightRequest="300">
-                            <Image x:Name="PreviewImage" Aspect="AspectFit" IsVisible="False" />
+                            <Image x:Name="PreviewImage" Aspect="AspectFit" IsVisible="False">
+                                <Image.GestureRecognizers>
+                                    <PointerGestureRecognizer PointerPressed="OnPreviewPointerPressed" />
+                                </Image.GestureRecognizers>
+                            </Image>
                             <AbsoluteLayout x:Name="EditorAnnotationLayer"
                                             IsVisible="False"
                                             InputTransparent="True" />
@@ -108,9 +240,25 @@
                                                 Stroke="#D56A2F"
                                                 StrokeThickness="2"
                                                 BackgroundColor="#B20E1410"
-                                                StrokeShape="RoundRectangle 999" />
+                                        StrokeShape="RoundRectangle 999" />
                                     </Grid>
                                 </ContentView>
+                            </AbsoluteLayout>
+                            <AbsoluteLayout x:Name="InlineTextEditorOverlay"
+                                            IsVisible="False"
+                                            ZIndex="10">
+                                <Border x:Name="InlineTextEditorHost"
+                                        IsVisible="False"
+                                        Padding="12,8"
+                                        StrokeThickness="0"
+                                        BackgroundColor="Transparent"
+                                        AbsoluteLayout.LayoutBounds="0,0,0,0">
+                                    <Editor x:Name="InlineTextEditor"
+                                            BackgroundColor="Transparent"
+                                            AutoSize="TextChanges"
+                                            TextChanged="OnInlineTextEditorTextChanged"
+                                            Unfocused="OnInlineTextEditorUnfocused" />
+                                </Border>
                             </AbsoluteLayout>
                             <AbsoluteLayout x:Name="SelectionOverlay" IsVisible="False">
                                 <BoxView x:Name="SelectionInputSurface"
@@ -173,143 +321,225 @@
                             </VerticalStackLayout>
                         </Grid>
                     </Border>
+
                     <HorizontalStackLayout x:Name="SelectionActionsPanel" Spacing="10" IsVisible="False">
                         <Button x:Name="ApplySelectionButton" Text="Capture Selection" IsEnabled="False" Clicked="OnApplySelectionClicked" />
                         <Button Text="Cancel Selection" Clicked="OnCancelSelectionClicked" />
                     </HorizontalStackLayout>
-                    <FlexLayout x:Name="EditorToolPanel"
-                                Wrap="Wrap"
-                                Direction="Row"
-                                AlignItems="Center"
-                                JustifyContent="Start"
-                                IsVisible="False">
-                        <Button x:Name="EditorRectangleButton" Margin="0,0,10,10" Text="Rectangle" Clicked="OnRectangleToolClicked" />
-                        <Button x:Name="EditorArrowButton" Margin="0,0,10,10" Text="Arrow" Clicked="OnArrowToolClicked" />
-                        <Button x:Name="EditorLineButton" Margin="0,0,10,10" Text="Line" Clicked="OnLineToolClicked" />
-                        <Button x:Name="EditorHighlightButton" Margin="0,0,10,10" Text="Highlight" Clicked="OnHighlightToolClicked" />
-                        <Button x:Name="EditorTextButton" Margin="0,0,10,10" Text="Text" Clicked="OnTextToolClicked" />
-                        <Button x:Name="EditorCalloutButton" Margin="0,0,10,10" Text="Callout" Clicked="OnCalloutToolClicked" />
-                        <Button x:Name="EditorUndoButton" Margin="0,0,10,10" Text="Undo" Clicked="OnUndoAnnotationClicked" />
-                        <Button x:Name="EditorSaveButton" Margin="0,0,10,10" Text="Save Copy" Clicked="OnSaveEditedCopyClicked" />
-                        <Button x:Name="EditorCloseButton" Margin="0,0,10,10" Text="Close Editor" Clicked="OnCloseEditorClicked" />
-                    </FlexLayout>
-                    <Border x:Name="EditorStylePanel"
-                            Padding="14"
+
+                    <Border x:Name="SettingsPanel"
+                            Padding="18"
                             IsVisible="False"
                             StrokeThickness="0"
-                            StrokeShape="RoundRectangle 20"
+                            StrokeShape="RoundRectangle 18"
                             BackgroundColor="{AppThemeBinding Light=#F5FBF7, Dark=#111A14}">
-                        <VerticalStackLayout Spacing="12">
+                        <VerticalStackLayout Spacing="14">
                             <VerticalStackLayout Spacing="4">
-                                <Label Text="Annotation properties"
-                                       FontSize="16"
+                                <Label Text="Settings"
+                                       FontSize="20"
                                        FontFamily="OpenSansSemibold"
                                        TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
-                                <Label Text="Changes apply to the selected object, or to the current tool preset when nothing is selected."
-                                       FontSize="12"
-                                       LineHeight="1.3"
+                                <Label Text="Configure the default behavior for captures launched from the menu bar icon."
+                                       FontSize="13"
+                                       LineHeight="1.35"
                                        TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
                             </VerticalStackLayout>
-                            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="12">
-                                <VerticalStackLayout x:Name="EditorStrokeColorPanel" Grid.Row="0" Grid.Column="0" Spacing="6">
-                                    <Label Text="Stroke color" FontSize="12" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
-                                    <Picker x:Name="EditorStrokeColorPicker" Title="Stroke color" SelectedIndexChanged="OnEditorStrokeColorChanged" />
-                                </VerticalStackLayout>
-                                <VerticalStackLayout x:Name="EditorFillColorPanel" Grid.Row="0" Grid.Column="1" Spacing="6">
-                                    <Label x:Name="EditorFillColorLabel" Text="Fill / background" FontSize="12" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
-                                    <Picker x:Name="EditorFillColorPicker" Title="Fill or background color" SelectedIndexChanged="OnEditorFillColorChanged" />
-                                </VerticalStackLayout>
-                                <VerticalStackLayout x:Name="EditorStrokeStylePanel" Grid.Row="1" Grid.Column="0" Spacing="6">
-                                    <Label Text="Stroke style" FontSize="12" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
-                                    <Picker x:Name="EditorStrokeStylePicker" Title="Stroke style" SelectedIndexChanged="OnEditorStrokeStyleChanged" />
-                                </VerticalStackLayout>
-                                <VerticalStackLayout x:Name="EditorTextColorPanel" Grid.Row="1" Grid.Column="1" Spacing="6">
-                                    <Label Text="Text color" FontSize="12" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
-                                    <Picker x:Name="EditorTextColorPicker" Title="Text color" SelectedIndexChanged="OnEditorTextColorChanged" />
-                                </VerticalStackLayout>
-                                <VerticalStackLayout x:Name="EditorStrokeThicknessPanel" Grid.Row="2" Grid.ColumnSpan="2" Spacing="6">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <Label Text="Stroke thickness" FontSize="12" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
-                                        <Label x:Name="EditorStrokeThicknessValueLabel"
-                                               FontSize="12"
+
+                            <Border Style="{StaticResource CompactFieldBorderStyle}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="Save captures to local storage by default"
+                                               FontSize="14"
                                                FontFamily="OpenSansSemibold"
                                                TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
-                                    </Grid>
-                                    <Slider x:Name="EditorStrokeThicknessSlider"
-                                            Minimum="1"
-                                            Maximum="16"
-                                            ThumbColor="#15875C"
-                                            MinimumTrackColor="#15875C"
-                                            MaximumTrackColor="#CFEFDD"
-                                            ValueChanged="OnEditorStrokeThicknessChanged" />
-                                </VerticalStackLayout>
-                                <VerticalStackLayout x:Name="EditorTextSizePanel" Grid.Row="3" Grid.ColumnSpan="2" Spacing="6">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <Label Text="Text size" FontSize="12" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
-                                        <Label x:Name="EditorTextSizeValueLabel"
+                                        <Label Text="Captured images are still created in the app cache first. When this is enabled, they are also copied into your chosen folder."
                                                FontSize="12"
+                                               LineHeight="1.35"
+                                               TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                    </VerticalStackLayout>
+                                    <Switch x:Name="SettingsSaveToLocalSwitch"
+                                            Grid.Column="1"
+                                            VerticalOptions="Center"
+                                            Toggled="OnSettingsSaveToLocalToggled" />
+                                </Grid>
+                            </Border>
+
+                            <Border Style="{StaticResource CompactFieldBorderStyle}">
+                                <VerticalStackLayout Spacing="8">
+                                    <Label Text="Local save folder"
+                                           FontSize="14"
+                                           FontFamily="OpenSansSemibold"
+                                           TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
+                                    <Entry x:Name="SettingsSaveLocationEntry"
+                                           Placeholder="/Users/you/Pictures/Greenshot"
+                                           ClearButtonVisibility="WhileEditing" />
+                                    <HorizontalStackLayout Spacing="10">
+                                        <Button x:Name="SettingsChooseFolderButton"
+                                                IsVisible="False"
+                                                Text="Choose Folder"
+                                                Clicked="OnChooseCaptureFolderClicked" />
+                                        <Button x:Name="SettingsUseDefaultFolderButton"
+                                                Text="Use Default Folder"
+                                                Clicked="OnUseDefaultCaptureFolderClicked" />
+                                        <Label x:Name="SettingsDefaultFolderLabel"
+                                               VerticalTextAlignment="Center"
+                                               FontSize="12"
+                                               LineBreakMode="TailTruncation"
+                                               TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                    </HorizontalStackLayout>
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <Border Style="{StaticResource CompactFieldBorderStyle}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="Copy captures to the clipboard by default"
+                                               FontSize="14"
                                                FontFamily="OpenSansSemibold"
                                                TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
-                                    </Grid>
-                                    <Slider x:Name="EditorTextSizeSlider"
-                                            Minimum="10"
-                                            Maximum="48"
-                                            ThumbColor="#15875C"
-                                            MinimumTrackColor="#15875C"
-                                            MaximumTrackColor="#CFEFDD"
-                                            ValueChanged="OnEditorTextSizeChanged" />
-                                </VerticalStackLayout>
-                            </Grid>
-                            <VerticalStackLayout x:Name="EditorTextContentPanel" Spacing="6">
-                                <Label x:Name="EditorTextContentLabel"
-                                       Text="Text"
-                                       FontSize="12"
-                                       TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
-                                <Editor x:Name="EditorTextInput"
-                                        HeightRequest="96"
-                                        AutoSize="TextChanges"
-                                        Placeholder="Enter annotation text"
-                                        TextChanged="OnEditorTextChanged" />
-                            </VerticalStackLayout>
+                                        <Label Text="After a successful capture, the final image is copied to the clipboard automatically."
+                                               FontSize="12"
+                                               LineHeight="1.35"
+                                               TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                    </VerticalStackLayout>
+                                    <Switch x:Name="SettingsCopyToClipboardSwitch"
+                                            Grid.Column="1"
+                                            VerticalOptions="Center" />
+                                </Grid>
+                            </Border>
+
+                            <HorizontalStackLayout Spacing="10">
+                                <Button Text="Save Settings" Clicked="OnSaveSettingsClicked" />
+                                <Button Text="Close" Clicked="OnCloseSettingsClicked" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border x:Name="EditorToolPanel"
+                            Padding="12"
+                            IsVisible="False"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 18"
+                            BackgroundColor="{AppThemeBinding Light=#F5FBF7, Dark=#111A14}">
+                        <VerticalStackLayout Spacing="10">
+                            <FlexLayout Wrap="Wrap"
+                                        Direction="Row"
+                                        AlignItems="Center"
+                                        JustifyContent="Start">
+                                <Button x:Name="EditorPencilButton" Style="{StaticResource CompactToolButtonStyle}" Text="Pencil" Clicked="OnPencilToolClicked" />
+                                <Button x:Name="EditorRectangleButton" Style="{StaticResource CompactToolButtonStyle}" Text="Rectangle" Clicked="OnRectangleToolClicked" />
+                                <Button x:Name="EditorArrowButton" Style="{StaticResource CompactToolButtonStyle}" Text="Arrow" Clicked="OnArrowToolClicked" />
+                                <Button x:Name="EditorLineButton" Style="{StaticResource CompactToolButtonStyle}" Text="Line" Clicked="OnLineToolClicked" />
+                                <Button x:Name="EditorHighlightButton" Style="{StaticResource CompactToolButtonStyle}" Text="Highlight" Clicked="OnHighlightToolClicked" />
+                                <Button x:Name="EditorTextButton" Style="{StaticResource CompactToolButtonStyle}" Text="Text" Clicked="OnTextToolClicked" />
+                                <Button x:Name="EditorCalloutButton" Style="{StaticResource CompactToolButtonStyle}" Text="Callout" Clicked="OnCalloutToolClicked" />
+                                <Button x:Name="EditorPasteButton" Style="{StaticResource CompactToolButtonStyle}" Text="Paste" Clicked="OnPasteFromClipboardClicked" />
+                                <Button x:Name="EditorUndoButton" Style="{StaticResource CompactToolButtonStyle}" Text="Undo" Clicked="OnUndoAnnotationClicked" />
+                                <Button x:Name="EditorSaveButton" Style="{StaticResource CompactToolButtonStyle}" Text="Save Copy" Clicked="OnSaveEditedCopyClicked" />
+                                <Button x:Name="EditorCloseButton" Style="{StaticResource CompactToolButtonStyle}" Text="Close" Clicked="OnCloseEditorClicked" />
+                            </FlexLayout>
+                            <FlexLayout x:Name="EditorStylePanel"
+                                        Wrap="Wrap"
+                                        Direction="Row"
+                                        AlignItems="Center"
+                                        JustifyContent="Start">
+                                <Border x:Name="EditorStrokeColorPanel" Style="{StaticResource CompactToolbarFieldStyle}">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="Stroke" FontSize="11" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                        <Picker x:Name="EditorStrokeColorPicker"
+                                                WidthRequest="138"
+                                                HeightRequest="34"
+                                                Title="Stroke color"
+                                                SelectedIndexChanged="OnEditorStrokeColorChanged" />
+                                    </VerticalStackLayout>
+                                </Border>
+                                <Border x:Name="EditorFillColorPanel" Style="{StaticResource CompactToolbarFieldStyle}">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label x:Name="EditorFillColorLabel" Text="Fill / background" FontSize="11" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                        <Picker x:Name="EditorFillColorPicker"
+                                                WidthRequest="138"
+                                                HeightRequest="34"
+                                                Title="Fill or background color"
+                                                SelectedIndexChanged="OnEditorFillColorChanged" />
+                                    </VerticalStackLayout>
+                                </Border>
+                                <Border x:Name="EditorStrokeStylePanel" Style="{StaticResource CompactToolbarFieldStyle}">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="Style" FontSize="11" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                        <Picker x:Name="EditorStrokeStylePicker"
+                                                WidthRequest="124"
+                                                HeightRequest="34"
+                                                Title="Stroke style"
+                                                SelectedIndexChanged="OnEditorStrokeStyleChanged" />
+                                    </VerticalStackLayout>
+                                </Border>
+                                <Border x:Name="EditorTextColorPanel" Style="{StaticResource CompactToolbarFieldStyle}">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="Text color" FontSize="11" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                        <Picker x:Name="EditorTextColorPicker"
+                                                WidthRequest="124"
+                                                HeightRequest="34"
+                                                Title="Text color"
+                                                SelectedIndexChanged="OnEditorTextColorChanged" />
+                                    </VerticalStackLayout>
+                                </Border>
+                                <Border x:Name="EditorStrokeThicknessPanel" Style="{StaticResource CompactToolbarFieldStyle}">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <Label Text="Stroke size" FontSize="11" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                            <Label x:Name="EditorStrokeThicknessValueLabel"
+                                                   FontSize="11"
+                                                   FontFamily="OpenSansSemibold"
+                                                   TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
+                                        </Grid>
+                                        <Slider x:Name="EditorStrokeThicknessSlider"
+                                                WidthRequest="138"
+                                                Minimum="1"
+                                                Maximum="16"
+                                                ThumbColor="#15875C"
+                                                MinimumTrackColor="#15875C"
+                                                MaximumTrackColor="#CFEFDD"
+                                                ValueChanged="OnEditorStrokeThicknessChanged" />
+                                    </VerticalStackLayout>
+                                </Border>
+                                <Border x:Name="EditorTextSizePanel" Style="{StaticResource CompactToolbarFieldStyle}">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <Label Text="Text size" FontSize="11" TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                            <Label x:Name="EditorTextSizeValueLabel"
+                                                   FontSize="11"
+                                                   FontFamily="OpenSansSemibold"
+                                                   TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
+                                        </Grid>
+                                        <Slider x:Name="EditorTextSizeSlider"
+                                                WidthRequest="138"
+                                                Minimum="10"
+                                                Maximum="48"
+                                                ThumbColor="#15875C"
+                                                MinimumTrackColor="#15875C"
+                                                MaximumTrackColor="#CFEFDD"
+                                                ValueChanged="OnEditorTextSizeChanged" />
+                                    </VerticalStackLayout>
+                                </Border>
+                                <Border x:Name="EditorTextContentPanel" Style="{StaticResource CompactToolbarFieldStyle}">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label x:Name="EditorTextContentLabel"
+                                               Text="Text"
+                                               FontSize="11"
+                                               TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
+                                        <Entry x:Name="EditorTextInput"
+                                               WidthRequest="180"
+                                               HeightRequest="34"
+                                               Placeholder="Annotation text"
+                                               TextChanged="OnEditorTextChanged" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </FlexLayout>
                         </VerticalStackLayout>
                     </Border>
                 </VerticalStackLayout>
             </Border>
 
-            <Border Padding="18" StrokeShape="RoundRectangle 24" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#171E1A}">
-                <VerticalStackLayout Spacing="12">
-                    <Label Text="Port status" FontSize="22" FontFamily="OpenSansSemibold" TextColor="{AppThemeBinding Light=#173525, Dark=#F0FFF6}" />
-                    <Label Text="These are the feature seams that must be reimplemented for a real MAUI screenshot tool."
-                           FontSize="13"
-                           TextColor="{AppThemeBinding Light=#557565, Dark=#9FB9A9}" />
-
-                    <VerticalStackLayout x:Name="CapabilitiesPanel" Spacing="10">
-                        <BindableLayout.ItemTemplate>
-                            <DataTemplate x:DataType="cap:CapabilityStatus">
-                                <Border Padding="14" StrokeThickness="0" StrokeShape="RoundRectangle 18" BackgroundColor="{Binding CardBackgroundHex}">
-                                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="8" ColumnSpacing="12">
-                                        <Label Text="{Binding Title}" FontSize="16" FontFamily="OpenSansSemibold" TextColor="#173525" />
-                                        <Border Grid.Column="1" Padding="10,4" StrokeThickness="0" StrokeShape="RoundRectangle 999" BackgroundColor="{Binding AccentHex}">
-                                            <Label Text="{Binding StateLabel}" FontSize="12" TextColor="White" FontFamily="OpenSansSemibold" />
-                                        </Border>
-                                        <Label Grid.Row="1"
-                                               Grid.ColumnSpan="2"
-                                               Text="{Binding Detail}"
-                                               FontSize="13"
-                                               LineHeight="1.35"
-                                               TextColor="#4D665A" />
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </BindableLayout.ItemTemplate>
-                    </VerticalStackLayout>
-                </VerticalStackLayout>
-            </Border>
-
-            <Label Text="Next step: keep expanding the editor with blur, obfuscation, resize, and the remaining tray, hotkey, and clipboard integrations."
-                   FontSize="12"
-                   HorizontalTextAlignment="Center"
-                   TextColor="{AppThemeBinding Light=#6A8576, Dark=#8FA695}" />
         </VerticalStackLayout>
     </ScrollView>
 

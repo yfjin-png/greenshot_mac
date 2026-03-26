@@ -12,6 +12,9 @@ public sealed record ScreenshotCaptureResult(
 	public static ScreenshotCaptureResult Success(string filePath, string message, int pixelWidth = 0, int pixelHeight = 0) =>
 		new(ScreenshotCaptureStatus.Succeeded, filePath, message, pixelWidth, pixelHeight);
 
+	public static ScreenshotCaptureResult Cancelled(string message) =>
+		new(ScreenshotCaptureStatus.Cancelled, null, message);
+
 	public static ScreenshotCaptureResult Unsupported(string message) =>
 		new(ScreenshotCaptureStatus.Unsupported, null, message);
 

@@ -2,6 +2,8 @@ namespace Greenshot.Maui.Core.Services;
 
 public enum ImageEditorTool
 {
+	Image,
+	Pencil,
 	Rectangle,
 	Arrow,
 	Highlight,
@@ -66,6 +68,24 @@ public static class ImageEditorToolDefaults
 {
 	public static ImageEditorToolPreset Get(ImageEditorTool tool) => tool switch
 	{
+		ImageEditorTool.Image => new(
+			new ImageEditorAnnotationStyle(
+				new ImageEditorColor(0, 0, 0, 0),
+				0f,
+				ImageEditorStrokeStyle.Solid,
+				new ImageEditorColor(0, 0, 0, 0),
+				new ImageEditorColor(0, 0, 0, 0),
+				20f),
+			string.Empty),
+		ImageEditorTool.Pencil => new(
+			new ImageEditorAnnotationStyle(
+				new ImageEditorColor(21, 135, 92),
+				4f,
+				ImageEditorStrokeStyle.Solid,
+				new ImageEditorColor(0, 0, 0, 0),
+				new ImageEditorColor(21, 135, 92),
+				20f),
+			string.Empty),
 		ImageEditorTool.Rectangle => new(
 			new ImageEditorAnnotationStyle(
 				new ImageEditorColor(220, 53, 69),
@@ -130,18 +150,59 @@ public sealed record ImageEditorAnnotation(
 	ImageEditorPoint StartPoint,
 	ImageEditorPoint EndPoint,
 	ImageEditorAnnotationStyle Style,
-	string Text)
+	string Text,
+	string? AssetPath = null,
+	IReadOnlyList<ImageEditorPoint>? PathPoints = null)
 {
-	public ImageEditorRect Bounds => ImageEditorRect.FromPoints(StartPoint, EndPoint);
+	public ImageEditorRect Bounds
+	{
+		get
+		{
+			if (Tool == ImageEditorTool.Pencil)
+			{
+				var points = GetPathPoints();
+				if (points.Count > 0)
+				{
+					var minX = points.Min(point => point.X);
+					var minY = points.Min(point => point.Y);
+					var maxX = points.Max(point => point.X);
+					var maxY = points.Max(point => point.Y);
+					return new ImageEditorRect(minX, minY, maxX - minX, maxY - minY);
+				}
+			}
 
-	public double Length =>
-		Math.Sqrt(Math.Pow(EndPoint.X - StartPoint.X, 2d) + Math.Pow(EndPoint.Y - StartPoint.Y, 2d));
+			return ImageEditorRect.FromPoints(StartPoint, EndPoint);
+		}
+	}
+
+	public double Length
+	{
+		get
+		{
+			if (Tool == ImageEditorTool.Pencil)
+			{
+				var points = GetPathPoints();
+				var total = 0d;
+				for (var index = 1; index < points.Count; index++)
+				{
+					total += Math.Sqrt(
+						Math.Pow(points[index].X - points[index - 1].X, 2d) +
+						Math.Pow(points[index].Y - points[index - 1].Y, 2d));
+				}
+
+				return total;
+			}
+
+			return Math.Sqrt(Math.Pow(EndPoint.X - StartPoint.X, 2d) + Math.Pow(EndPoint.Y - StartPoint.Y, 2d));
+		}
+	}
 
 	public bool IsMeaningful(double minimumPixels = 6d)
 	{
 		return Tool switch
 		{
-			ImageEditorTool.Arrow or ImageEditorTool.Line => Length >= minimumPixels,
+			ImageEditorTool.Arrow or ImageEditorTool.Line or ImageEditorTool.Pencil => Length >= minimumPixels,
+			ImageEditorTool.Image => !string.IsNullOrWhiteSpace(AssetPath) && Bounds.Width >= minimumPixels && Bounds.Height >= minimumPixels,
 			_ => Bounds.Width >= minimumPixels && Bounds.Height >= minimumPixels
 		};
 	}
@@ -150,19 +211,28 @@ public sealed record ImageEditorAnnotation(
 		this with
 		{
 			StartPoint = new ImageEditorPoint(StartPoint.X + deltaX, StartPoint.Y + deltaY),
-			EndPoint = new ImageEditorPoint(EndPoint.X + deltaX, EndPoint.Y + deltaY)
+			EndPoint = new ImageEditorPoint(EndPoint.X + deltaX, EndPoint.Y + deltaY),
+			PathPoints = PathPoints?
+				.Select(point => new ImageEditorPoint(point.X + deltaX, point.Y + deltaY))
+				.ToArray()
 		};
 
 	public ImageEditorAnnotation WithStart(ImageEditorPoint point) =>
 		this with
 		{
-			StartPoint = point
+			StartPoint = point,
+			PathPoints = Tool == ImageEditorTool.Pencil
+				? ReplacePathPoint(0, point)
+				: PathPoints
 		};
 
 	public ImageEditorAnnotation WithEnd(ImageEditorPoint point) =>
 		this with
 		{
-			EndPoint = point
+			EndPoint = point,
+			PathPoints = Tool == ImageEditorTool.Pencil
+				? ReplacePathPoint(GetPathPoints().Count - 1, point)
+				: PathPoints
 		};
 
 	public ImageEditorAnnotation WithBounds(ImageEditorRect bounds) =>
@@ -176,6 +246,7 @@ public sealed record ImageEditorAnnotation(
 	{
 		switch (Tool)
 		{
+			case ImageEditorTool.Image:
 			case ImageEditorTool.Rectangle:
 			case ImageEditorTool.Highlight:
 			case ImageEditorTool.Text:
@@ -212,6 +283,28 @@ public sealed record ImageEditorAnnotation(
 				}
 
 				break;
+			case ImageEditorTool.Pencil:
+				var pencilBounds = Bounds;
+				if (IsPointInsideExpandedRect(point, pencilBounds, tolerance))
+				{
+					var pathPoints = GetPathPoints();
+					for (var index = 1; index < pathPoints.Count; index++)
+					{
+						if (DistanceToSegment(point, pathPoints[index - 1], pathPoints[index]) <= tolerance)
+						{
+							handle = ImageEditorSelectionHandle.Body;
+							return true;
+						}
+					}
+
+					if (pathPoints.Count > 0)
+					{
+						handle = ImageEditorSelectionHandle.Body;
+						return true;
+					}
+				}
+
+				break;
 			case ImageEditorTool.Arrow:
 			case ImageEditorTool.Line:
 				if (IsPointNear(point, StartPoint, tolerance))
@@ -237,6 +330,28 @@ public sealed record ImageEditorAnnotation(
 
 		handle = default;
 		return false;
+	}
+
+	private IReadOnlyList<ImageEditorPoint> GetPathPoints()
+	{
+		if (PathPoints is { Count: > 0 })
+		{
+			return PathPoints;
+		}
+
+		return [StartPoint, EndPoint];
+	}
+
+	private IReadOnlyList<ImageEditorPoint> ReplacePathPoint(int index, ImageEditorPoint point)
+	{
+		var points = GetPathPoints().ToArray();
+		if (index < 0 || index >= points.Length)
+		{
+			return points;
+		}
+
+		points[index] = point;
+		return points;
 	}
 
 	private static bool IsPointInsideExpandedRect(ImageEditorPoint point, ImageEditorRect bounds, double tolerance) =>

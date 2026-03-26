@@ -7,4 +7,10 @@ public sealed record ScreenshotCropBounds(
 	int Height)
 {
 	public bool IsEmpty => Width <= 0 || Height <= 0;
+
+	public ScreenshotCropBounds ToBottomLeftOrigin(int imageHeight)
+	{
+		ArgumentOutOfRangeException.ThrowIfNegative(imageHeight);
+		return new ScreenshotCropBounds(X, imageHeight - Y - Height, Width, Height);
+	}
 }

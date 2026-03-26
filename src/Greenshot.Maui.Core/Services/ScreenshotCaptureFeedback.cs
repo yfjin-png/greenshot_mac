@@ -14,6 +14,7 @@ public static class ScreenshotCaptureFeedbackBuilder
 	{
 		var statusLabel = status switch
 		{
+			ScreenshotCaptureStatus.Cancelled => "Capture cancelled",
 			ScreenshotCaptureStatus.PermissionDenied => "Permission needed",
 			ScreenshotCaptureStatus.Unsupported => "Capture unavailable",
 			_ => "Capture failed"
@@ -24,7 +25,11 @@ public static class ScreenshotCaptureFeedbackBuilder
 				? $"{message}{Environment.NewLine}{Environment.NewLine}{permissionTroubleshootingHint}"
 				: message;
 
-		return new ScreenshotCaptureFeedback("Capture failed", statusLabel, composedMessage);
+		var title = status == ScreenshotCaptureStatus.Cancelled
+			? "Capture cancelled"
+			: "Capture failed";
+
+		return new ScreenshotCaptureFeedback(title, statusLabel, composedMessage);
 	}
 
 	public static ScreenshotCaptureFeedback Build(

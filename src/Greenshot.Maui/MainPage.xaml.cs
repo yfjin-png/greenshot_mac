@@ -10,35 +10,48 @@ public partial class MainPage : ContentPage
 	private const string MacCatalystPermissionTroubleshootingHint =
 		"If Screen Recording is already enabled in System Settings but capture still fails, run `tccutil reset ScreenCapture org.greenshot.maui`, relaunch the app, and approve the current build again. Rebuilding the MacCatalyst app before approving can still change the code requirement that TCC matches, so use the current build without rebuilding once permission has been granted.";
 
+	private readonly IAppVisibilityService _appVisibilityService;
+	private readonly ICaptureDefaultsService _captureDefaultsService;
 	private readonly IImageEditorService _imageEditorService;
-	private readonly IPlatformCapabilityService _platformCapabilityService;
+	private readonly ILocalFolderAccessService _localFolderAccessService;
 	private readonly IScreenshotCaptureService _screenshotCaptureService;
 	private readonly ScreenshotWorkspaceSession _workspaceSession = new();
 
 	public MainPage(
+		IAppVisibilityService appVisibilityService,
+		ICaptureDefaultsService captureDefaultsService,
 		IImageEditorService imageEditorService,
-		IPlatformCapabilityService platformCapabilityService,
+		ILocalFolderAccessService localFolderAccessService,
 		IScreenshotCaptureService screenshotCaptureService)
 	{
+		_appVisibilityService = appVisibilityService;
+		_captureDefaultsService = captureDefaultsService;
 		_imageEditorService = imageEditorService;
-		_platformCapabilityService = platformCapabilityService;
+		_localFolderAccessService = localFolderAccessService;
 		_screenshotCaptureService = screenshotCaptureService;
 
 		InitializeComponent();
 		InitializeEditorStylePanel();
+		InitializeSettingsPanel();
 
 		PreviewStage.SizeChanged += OnPreviewSurfaceSizeChanged;
 		EditorInputOverlay.SizeChanged += OnPreviewSurfaceSizeChanged;
 		SelectionInputSurface.SizeChanged += OnPreviewSurfaceSizeChanged;
 
-		BindCapabilities();
+		InitializePageState();
 	}
 
-	private void BindCapabilities()
+	private void InitializePageState()
 	{
 		PlatformValueLabel.Text = DeviceInfo.Current.Platform.ToString();
 		StatusValueLabel.Text = "Preview workspace";
-		BindableLayout.SetItemsSource(CapabilitiesPanel, _platformCapabilityService.GetCapabilities());
 		RefreshWorkspaceState();
+	}
+
+	internal void AttachMenuHost(AppShell menuHost)
+	{
+		ArgumentNullException.ThrowIfNull(menuHost);
+		_menuHost = menuHost;
+		UpdateWorkspaceMenuState();
 	}
 }

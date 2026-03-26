@@ -85,4 +85,69 @@ public class ScreenshotWorkspaceSessionTests
 		Assert.False(session.IsSelectingRegion);
 		Assert.Null(session.SelectionSourcePath);
 	}
+
+	[Fact]
+	public void LoadImage_AppendsToHistoryAndTracksCurrentPosition()
+	{
+		var session = new ScreenshotWorkspaceSession();
+
+		session.LoadImage("/tmp/first.png");
+		session.LoadImage("/tmp/second.png");
+
+		Assert.Equal(["/tmp/first.png", "/tmp/second.png"], session.ImageHistory);
+		Assert.Equal("/tmp/second.png", session.SelectedImagePath);
+		Assert.Equal(2, session.SelectedImageHistoryNumber);
+		Assert.True(session.CanSelectPreviousImage);
+		Assert.False(session.CanSelectNextImage);
+	}
+
+	[Fact]
+	public void SelectPreviousImage_MovesBackwardThroughHistory()
+	{
+		var session = new ScreenshotWorkspaceSession();
+		session.LoadImage("/tmp/first.png");
+		session.LoadImage("/tmp/second.png");
+		session.LoadImage("/tmp/third.png");
+
+		var moved = session.SelectPreviousImage();
+
+		Assert.True(moved);
+		Assert.Equal("/tmp/second.png", session.SelectedImagePath);
+		Assert.Equal(2, session.SelectedImageHistoryNumber);
+		Assert.True(session.CanSelectPreviousImage);
+		Assert.True(session.CanSelectNextImage);
+	}
+
+	[Fact]
+	public void SelectNextImage_MovesForwardAfterGoingBack()
+	{
+		var session = new ScreenshotWorkspaceSession();
+		session.LoadImage("/tmp/first.png");
+		session.LoadImage("/tmp/second.png");
+		session.SelectPreviousImage();
+
+		var moved = session.SelectNextImage();
+
+		Assert.True(moved);
+		Assert.Equal("/tmp/second.png", session.SelectedImagePath);
+		Assert.Equal(2, session.SelectedImageHistoryNumber);
+		Assert.True(session.CanSelectPreviousImage);
+		Assert.False(session.CanSelectNextImage);
+	}
+
+	[Fact]
+	public void LoadImage_AfterGoingBack_ReplacesForwardHistory()
+	{
+		var session = new ScreenshotWorkspaceSession();
+		session.LoadImage("/tmp/first.png");
+		session.LoadImage("/tmp/second.png");
+		session.LoadImage("/tmp/third.png");
+		session.SelectPreviousImage();
+
+		session.LoadImage("/tmp/fourth.png");
+
+		Assert.Equal(["/tmp/first.png", "/tmp/second.png", "/tmp/fourth.png"], session.ImageHistory);
+		Assert.Equal("/tmp/fourth.png", session.SelectedImagePath);
+		Assert.False(session.CanSelectNextImage);
+	}
 }

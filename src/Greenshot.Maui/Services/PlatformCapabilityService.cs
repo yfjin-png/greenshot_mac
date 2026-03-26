@@ -33,7 +33,7 @@ public sealed class PlatformCapabilityService : IPlatformCapabilityService
 				"Screen capture",
 				_screenshotCaptureService.IsSupported,
 				_screenshotCaptureService.IsSupported
-						? $"Primary-display capture, window targeting, and in-app region selection are now routed through a native {platformName} adapter. Desktop overlay capture and hotkey-triggered capture still need follow-up work."
+						? $"Display capture, window targeting, and in-app region selection are now routed through a native {platformName} adapter. Desktop overlay capture and hotkey-triggered capture still need follow-up work."
 						: $"Needs a native {platformName} capture adapter. The current Greenshot capture pipeline is still bound to Windows-specific APIs and window handles.",
 					_screenshotCaptureService.IsSupported ? "#15875C" : "#D56A2F"),
 			new CapabilityStatus(

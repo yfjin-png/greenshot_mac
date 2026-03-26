@@ -4,4 +4,75 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     Title="Greenshot"
-    FlyoutBehavior="Disabled" />
+    FlyoutBehavior="Disabled">
+    <Shell.MenuBarItems>
+        <MenuBarItem x:Name="FileMenuBarItem" Text="File">
+            <MenuFlyoutItem x:Name="OpenImageMenuItem"
+                            Text="Open Image..."
+                            Clicked="OnOpenImageMenuItemClicked">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Cmd" Key="O" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+        </MenuBarItem>
+        <MenuBarItem x:Name="CaptureMenuBarItem" Text="Capture">
+            <MenuFlyoutItem x:Name="CaptureScreenMenuItem"
+                            Text="Capture Screen"
+                            Clicked="OnCaptureScreenMenuItemClicked" />
+            <MenuFlyoutItem x:Name="CaptureWindowMenuItem"
+                            Text="Capture Window"
+                            Clicked="OnCaptureWindowMenuItemClicked" />
+            <MenuFlyoutItem x:Name="CaptureRegionMenuItem"
+                            Text="Capture Region"
+                            Clicked="OnCaptureRegionMenuItemClicked" />
+        </MenuBarItem>
+        <MenuBarItem x:Name="ImageMenuBarItem" Text="Image">
+            <MenuFlyoutItem x:Name="EditImageMenuItem"
+                            Text="Edit Image"
+                            Clicked="OnEditImageMenuItemClicked" />
+            <MenuFlyoutItem x:Name="CopyToClipboardMenuItem"
+                            Text="Copy to Clipboard"
+                            Clicked="OnCopyToClipboardMenuItemClicked" />
+            <MenuFlyoutItem x:Name="CopyPathMenuItem"
+                            Text="Copy Path"
+                            Clicked="OnCopyPathMenuItemClicked" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem x:Name="ClearImageMenuItem"
+                            Text="Clear Image"
+                            Clicked="OnClearImageMenuItemClicked" />
+        </MenuBarItem>
+        <MenuBarItem x:Name="SelectionMenuBarItem" Text="Selection">
+            <MenuFlyoutItem x:Name="ApplySelectionMenuItem"
+                            Text="Capture Selection"
+                            Clicked="OnApplySelectionMenuItemClicked" />
+            <MenuFlyoutItem x:Name="CancelSelectionMenuItem"
+                            Text="Cancel Selection"
+                            Clicked="OnCancelSelectionMenuItemClicked" />
+        </MenuBarItem>
+        <MenuBarItem x:Name="EditorMenuBarItem" Text="Editor">
+            <MenuFlyoutItem x:Name="SaveEditedCopyMenuItem"
+                            Text="Save Copy"
+                            Clicked="OnSaveEditedCopyMenuItemClicked">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Cmd" Key="S" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem x:Name="CloseEditorMenuItem"
+                            Text="Close Editor"
+                            Clicked="OnCloseEditorMenuItemClicked" />
+        </MenuBarItem>
+        <MenuBarItem x:Name="NavigateMenuBarItem" Text="Navigate">
+            <MenuFlyoutItem x:Name="PreviousImageMenuItem"
+                            Text="Previous Image"
+                            Clicked="OnPreviousImageMenuItemClicked" />
+            <MenuFlyoutItem x:Name="NextImageMenuItem"
+                            Text="Next Image"
+                            Clicked="OnNextImageMenuItemClicked" />
+        </MenuBarItem>
+        <MenuBarItem x:Name="WindowMenuBarItem" Text="Window">
+            <MenuFlyoutItem x:Name="ShowPreviewMenuItem"
+                            Text="Show Preview"
+                            Clicked="OnShowPreviewMenuItemClicked" />
+        </MenuBarItem>
+    </Shell.MenuBarItems>
+</Shell>
